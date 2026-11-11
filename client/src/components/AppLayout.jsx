@@ -55,7 +55,7 @@ function Sidebar({ onNavigate }) {
       {user.role !== 'employee' && company && (
         <div className="space-y-1 border-t border-white/10 p-3">
           <a href={`/book/${company.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-navy-300 transition hover:bg-white/5 hover:text-white">
-            <ExternalLink className="size-4" /> Openbare boekingspagina
+            <ExternalLink className="size-4" /> Bekijk als klant
           </a>
         </div>
       )}
@@ -158,7 +158,7 @@ function UserMenu() {
 
 export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { company, subscription, refresh } = useAuth();
+  const { company, subscription, refresh, user } = useAuth();
   const location = useLocation();
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
@@ -188,6 +188,12 @@ export default function AppLayout() {
               <Link to="/app/settings?tab=billing"><Badge color={subscription.trialExpired ? 'red' : 'emerald'}>{subscription.trialExpired ? 'Proefperiode verlopen' : `Proefperiode · nog ${daysLeft} ${daysLeft === 1 ? 'dag' : 'dagen'}`}</Badge></Link>
             )}
           </div>
+          {user.role !== 'employee' && company && (
+            <a href={`/book/${company.slug}`} target="_blank" rel="noreferrer"
+              className="hidden items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 sm:inline-flex">
+              <ExternalLink className="size-4" />Bekijk als klant
+            </a>
+          )}
           <NotificationBell />
           <UserMenu />
         </header>

@@ -74,7 +74,9 @@ function Login() {
           {[['Eigenaar', 'demo@cleanflow.app'], ['Manager', 'manager@cleanflow.app'], ['Medewerker', 'employee@cleanflow.app']].map(([r, em]) => (
             <Button key={r} size="sm" variant="secondary" onClick={() => fillDemo(em)}>{r}</Button>
           ))}
+          <Button size="sm" href="/book/sparkle-shine-demo">Klant (afspraak boeken)</Button>
         </div>
+        <p className="mt-2 text-xs text-navy-400">Als klant hoef je niet in te loggen: je boekt direct op de boekingspagina.</p>
       </div>
     </Shell>
   );
