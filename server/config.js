@@ -17,7 +17,7 @@ export const config = {
   isProd,
   isTest: env.NODE_ENV === 'test',
   port: Number(env.PORT || 3001),
-  appUrl: (env.APP_URL || (isProd ? '' : 'http://localhost:5173')).replace(/\/$/, ''),
+  appUrl: (env.APP_URL || env.RENDER_EXTERNAL_URL || (isProd ? '' : 'http://localhost:5173')).replace(/\/$/, ''),
   databaseFile: env.DATABASE_FILE || path.resolve(process.cwd(), 'data/cleanflow.db'),
   sessionDays: Number(env.SESSION_DAYS || 14),
 
