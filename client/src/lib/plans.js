@@ -1,22 +1,22 @@
 export const PLANS = [
   {
     id: 'starter', name: 'Starter', price: 19,
-    tagline: 'For solo cleaners and small teams getting organised.',
-    features: ['Business dashboard', 'Customer management', 'Booking management', 'Online booking page', 'Basic analytics', 'Up to 2 user accounts'],
+    tagline: 'Voor zelfstandige schoonmakers en kleine teams die overzicht willen.',
+    features: ['Bedrijfsdashboard', 'Klantenbeheer', 'Boekingsbeheer', 'Online boekingspagina', 'Basisanalyses', 'Tot 2 gebruikersaccounts'],
   },
   {
     id: 'professional', name: 'Professional', price: 39, popular: true,
-    tagline: 'For growing companies with a team in the field.',
-    features: ['Everything in Starter', 'AI customer support assistant', 'Employee management & scheduling', 'Advanced analytics', 'Automated email & SMS notifications', 'Up to 15 user accounts'],
+    tagline: 'Voor groeiende bedrijven met een team op pad.',
+    features: ['Alles uit Starter', 'AI-klantenservice-assistent', 'Personeelsbeheer & planning', 'Uitgebreide analyses', 'Automatische e-mail- & sms-meldingen', 'Tot 15 gebruikersaccounts'],
   },
   {
     id: 'business', name: 'Business', price: 69,
-    tagline: 'For established companies that need more control.',
-    features: ['Everything in Professional', 'Advanced business management', 'Custom branding (your logo)', 'Advanced reporting & CSV exports', 'Priority support', 'Up to 100 user accounts'],
+    tagline: 'Voor gevestigde bedrijven die meer controle willen.',
+    features: ['Alles uit Professional', 'Uitgebreid bedrijfsbeheer', 'Eigen huisstijl (je logo)', 'Uitgebreide rapportages & CSV-export', 'Voorrang bij support', 'Tot 100 gebruikersaccounts'],
   },
 ];
 
 export const FEATURE_LABELS = {
-  ai_assistant: 'AI assistant', employees: 'Employee management', advanced_analytics: 'Advanced analytics',
-  automated_notifications: 'Automated notifications', advanced_reporting: 'Advanced reporting', custom_branding: 'Custom branding',
+  ai_assistant: 'AI-assistent', employees: 'Personeelsbeheer', advanced_analytics: 'Uitgebreide analyses',
+  automated_notifications: 'Automatische meldingen', advanced_reporting: 'Uitgebreide rapportages', custom_branding: 'Eigen huisstijl',
 };

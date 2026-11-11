@@ -25,21 +25,21 @@ export default function Notifications() {
     if (n.link) navigate(n.link); else res.reload(true);
   };
   const readAll = async () => {
-    try { await api.post('/notifications/read-all'); toast.success('All notifications marked as read'); refresh(); res.reload(true); } catch (err) { toast.error(err.message); }
+    try { await api.post('/notifications/read-all'); toast.success('Alle meldingen gemarkeerd als gelezen'); refresh(); res.reload(true); } catch (err) { toast.error(err.message); }
   };
 
   return (
     <div>
-      <PageHeader title="Notifications" description="New bookings, confirmations, cancellations, reminders and more."
+      <PageHeader title="Meldingen" description="Nieuwe boekingen, bevestigingen, annuleringen, herinneringen en meer."
         actions={<>
-          {isAdmin && <Button variant="secondary" icon={Settings2} to="/app/settings?tab=notifications">Preferences</Button>}
-          <Button variant="secondary" icon={CheckCheck} onClick={readAll}>Mark all read</Button>
+          {isAdmin && <Button variant="secondary" icon={Settings2} to="/app/settings?tab=notifications">Voorkeuren</Button>}
+          <Button variant="secondary" icon={CheckCheck} onClick={readAll}>Alles gelezen</Button>
         </>} />
-      <div className="mb-4"><Segmented value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'unread', label: 'Unread' }]} /></div>
+      <div className="mb-4"><Segmented value={filter} onChange={setFilter} options={[{ value: 'all', label: 'Alle' }, { value: 'unread', label: 'Ongelezen' }]} /></div>
       <Card>
         {res.loading && !res.data ? <div className="space-y-3 p-5">{[...Array(6)].map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
           : res.error ? <ErrorState error={res.error} onRetry={res.reload} />
-            : items.length === 0 ? <EmptyState icon={Bell} title={filter === 'unread' ? 'No unread notifications' : 'No notifications yet'} description="You'll be notified here about bookings and your team." />
+            : items.length === 0 ? <EmptyState icon={Bell} title={filter === 'unread' ? 'Geen ongelezen meldingen' : 'Nog geen meldingen'} description="Hier krijg je meldingen over boekingen en je team." />
               : (
                 <ul className="divide-y divide-navy-100">
                   {items.map((n) => {
@@ -53,7 +53,7 @@ export default function Notifications() {
                             {n.body && <p className="mt-0.5 text-sm text-navy-500">{n.body}</p>}
                             <p className="mt-1 text-xs text-navy-400">{timeAgo(n.created_at)}</p>
                           </div>
-                          {!n.is_read && <span className="mt-2 size-2.5 shrink-0 rounded-full bg-emerald-500" aria-label="Unread" />}
+                          {!n.is_read && <span className="mt-2 size-2.5 shrink-0 rounded-full bg-emerald-500" aria-label="Ongelezen" />}
                         </button>
                       </li>
                     );

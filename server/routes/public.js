@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { all, one, run, tx } from '../db.js';
 import { config } from '../config.js';
-import { parse, v, notFound, badRequest, HttpError, bookingReference, logActivity, todayIn, addDays } from '../lib/core.js';
+import { parse, v, notFound, badRequest, HttpError, bookingReference, logActivity, todayIn, addDays, fmtWhen, fmtShort } from '../lib/core.js';
 import { getSubscription } from '../lib/auth.js';
 import { assertBookable, availableSlots, availableDates, getCompany } from '../lib/availability.js';
 import { getAiSettings } from '../lib/assistant.js';
@@ -13,11 +13,11 @@ import { BOOKING_SELECT } from './bookings.js';
 
 const router = Router();
 const limit = (n, windowMin = 10) => rateLimit({ windowMs: windowMin * 60 * 1000, limit: config.isTest ? 10000 : n, standardHeaders: 'draft-7', legacyHeaders: false,
-  message: { error: 'Too many requests. Please wait a moment and try again.' } });
+  message: { error: 'Te veel verzoeken. Wacht even en probeer het opnieuw.' } });
 
 function companyBySlug(slug) {
   const row = one('SELECT id FROM companies WHERE slug = ?', String(slug));
-  if (!row) throw notFound('Company');
+  if (!row) throw notFound('Bedrijf');
   return getCompany(row.id);
 }
 
@@ -42,7 +42,7 @@ router.get('/company/:slug', (req, res) => {
 
 function activeService(company, id) {
   const s = one('SELECT * FROM services WHERE id = ? AND company_id = ? AND active = 1', id, company.id);
-  if (!s) throw notFound('Service');
+  if (!s) throw notFound('Dienst');
   return s;
 }
 
@@ -64,13 +64,13 @@ router.get('/company/:slug/slots', limit(300), (req, res) => {
 
 router.post('/company/:slug/bookings', limit(10), (req, res) => {
   const c = companyBySlug(req.params.slug);
-  if (!c.booking_enabled) throw new HttpError(409, 'Online booking is currently unavailable. Please contact us directly.');
+  if (!c.booking_enabled) throw new HttpError(409, 'Online boeken is op dit moment niet mogelijk. Neem direct contact met ons op.');
   const b = parse(z.object({
     service_id: z.number().int(), date: v.date, time: v.time,
     address: v.text(200).min(3, 'is required'), postal_code: v.optText(20), city: v.optText(80),
     name: v.name, email: v.email, phone: v.phone,
     instructions: v.optText(1000),
-    privacy_consent: z.literal(true, { error: 'Please agree to the processing of your details' }),
+    privacy_consent: z.literal(true, { error: 'Geef toestemming voor het verwerken van je gegevens' }),
     website: z.string().max(0).optional(), // honeypot
   }), req.body);
   const s = activeService(c, b.service_id);
@@ -80,7 +80,7 @@ router.post('/company/:slug/bookings', limit(10), (req, res) => {
     if (!availableSlots(c, s, b.date).includes(b.time)) {
       // assertBookable gives the precise reason; fall back to a generic one.
       assertBookable(c, start, s.duration_min);
-      throw new HttpError(409, 'That time is no longer available. Please choose another slot.');
+      throw new HttpError(409, 'Die tijd is niet meer beschikbaar. Kies een andere tijd.');
     }
     const end = assertBookable(c, start, s.duration_min);
     let customer = one('SELECT * FROM customers WHERE company_id = ? AND email = ?', c.id, b.email);
@@ -97,15 +97,15 @@ router.post('/company/:slug/bookings', limit(10), (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 'online')`, c.id, bookingReference(), customer.id, s.id, start, end, fullAddress, b.instructions, s.price_cents).lastInsertRowid);
   });
   const booking = one(`${BOOKING_SELECT} WHERE b.id = ?`, id);
-  logActivity(c.id, null, 'requested', 'booking', id, `${b.name} requested ${s.name} online for ${start}`);
+  logActivity(c.id, null, 'requested', 'booking', id, `${b.name} heeft online ${s.name} aangevraagd voor ${fmtShort(start)}`);
   notifySafe(c.id, 'booking_new', {
-    title: `New booking request: ${s.name}`, body: `${b.name} · ${start}`, link: `/app/bookings?open=${id}`, emailTo: [c.email],
-    emailSubject: `New booking request ${booking.reference}`,
-    emailBody: `${b.name} (${b.email}, ${b.phone}) requested ${s.name} on ${start}.\nAddress: ${fullAddress}\n${b.instructions ? `Instructions: ${b.instructions}\n` : ''}\nReview it in CLEANFLOW: ${config.appUrl}/app/bookings?open=${id}`,
+    title: `Nieuwe aanvraag: ${s.name}`, body: `${b.name} · ${fmtShort(start)}`, link: `/app/bookings?open=${id}`, emailTo: [c.email],
+    emailSubject: `Nieuwe boekingsaanvraag ${booking.reference}`,
+    emailBody: `${b.name} (${b.email}, ${b.phone}) heeft ${s.name} aangevraagd voor ${fmtWhen(start)}.\nAdres: ${fullAddress}\n${b.instructions ? `Bijzonderheden: ${b.instructions}\n` : ''}\nBekijk de aanvraag in CLEANFLOW: ${config.appUrl}/app/bookings?open=${id}`,
   });
   // Receipt to the customer (transactional; sent whenever email delivery is configured).
-  sendEmail(c.id, b.email, `We received your booking request – ${c.name}`,
-    `Hi ${b.name},\n\nThanks for your request for ${s.name} on ${start}.\nReference: ${booking.reference}\n\nThis is not yet a confirmation – we'll email you as soon as ${c.name} confirms your appointment.\n\n${c.name}${c.phone ? `\n${c.phone}` : ''}`).catch(() => {});
+  sendEmail(c.id, b.email, `We hebben je aanvraag ontvangen – ${c.name}`,
+    `Hallo ${b.name},\n\nBedankt voor je aanvraag voor ${s.name} op ${fmtWhen(start)}.\nReferentie: ${booking.reference}\n\nDit is nog geen bevestiging. Je krijgt een e-mail zodra ${c.name} je afspraak bevestigt.\n\nMet vriendelijke groet,\n${c.name}${c.phone ? `\n${c.phone}` : ''}`).catch(() => {});
   res.status(201).json({
     booking: { reference: booking.reference, service: s.name, starts_at: booking.starts_at, ends_at: booking.ends_at, address: booking.address, status: booking.status, price_cents: booking.price_cents, price_unit: s.price_unit },
   });
@@ -116,22 +116,22 @@ const chatLimiter = limit(40, 5);
 
 function conversationByToken(token) {
   const conv = one('SELECT * FROM chat_conversations WHERE public_token = ?', String(token));
-  if (!conv) throw notFound('Conversation');
+  if (!conv) throw notFound('Gesprek');
   return conv;
 }
 const visibleMessages = (convId, after = 0) => all(`SELECT id, role, content, created_at FROM chat_messages WHERE conversation_id = ? AND id > ? ORDER BY id`, convId, after);
 
 router.post('/company/:slug/chat', chatLimiter, async (req, res) => {
   const c = companyBySlug(req.params.slug);
-  if (!assistantAvailable(c)) throw new HttpError(409, 'The chat assistant is not available for this company.');
-  const b = parse(z.object({ message: v.text(1000).min(1, 'is required'), token: z.string().max(100).optional() }), req.body);
+  if (!assistantAvailable(c)) throw new HttpError(409, 'De chat-assistent is niet beschikbaar voor dit bedrijf.');
+  const b = parse(z.object({ message: v.text(1000).min(1, 'is verplicht'), token: z.string().max(100).optional() }), req.body);
   let conv = b.token ? one('SELECT * FROM chat_conversations WHERE public_token = ? AND company_id = ?', b.token, c.id) : null;
   if (!conv) {
     const token = newConversationToken();
     const id = Number(run(`INSERT INTO chat_conversations (company_id, public_token) VALUES (?, ?)`, c.id, token).lastInsertRowid);
     conv = one('SELECT * FROM chat_conversations WHERE id = ?', id);
   }
-  if (all('SELECT 1 FROM chat_messages WHERE conversation_id = ?', conv.id).length > 200) throw badRequest('This conversation is too long. Please start a new chat.');
+  if (all('SELECT 1 FROM chat_messages WHERE conversation_id = ?', conv.id).length > 200) throw badRequest('Dit gesprek is te lang. Begin een nieuw gesprek.');
   const lastId = one('SELECT COALESCE(MAX(id),0) m FROM chat_messages WHERE conversation_id = ?', conv.id).m;
   const result = await handleVisitorMessage(c, conv, b.message);
   res.json({ token: conv.public_token, messages: visibleMessages(conv.id, lastId), escalated: result.escalate || conv.status === 'escalated' });
@@ -147,16 +147,16 @@ router.post('/chat/:token/contact', chatLimiter, (req, res) => {
   const conv = conversationByToken(req.params.token);
   const b = parse(z.object({
     name: v.name, email: v.optEmail, phone: v.optPhone,
-    consent: z.literal(true, { error: 'Consent is required to share your details' }),
-  }).refine((x) => x.email || x.phone, { message: 'Enter an email address or phone number', path: ['email'] }), req.body);
+    consent: z.literal(true, { error: 'Geef toestemming om je gegevens te delen' }),
+  }).refine((x) => x.email || x.phone, { message: 'Vul een e-mailadres of telefoonnummer in', path: ['email'] }), req.body);
   run(`UPDATE chat_conversations SET visitor_name = ?, visitor_email = ?, visitor_phone = ?, contact_consent = 1, updated_at = datetime('now') WHERE id = ?`,
     b.name, b.email, b.phone, conv.id);
   run(`INSERT INTO chat_messages (conversation_id, role, content) VALUES (?, 'assistant', ?)`, conv.id,
-    `Thanks ${b.name}! I've shared your contact details with the team so they can follow up with you.`);
+    `Bedankt ${b.name}! Ik heb je contactgegevens doorgegeven aan het team, zodat ze contact met je kunnen opnemen.`);
   if (conv.status !== 'escalated') {
-    run(`UPDATE chat_conversations SET status = 'escalated', escalation_reason = 'Visitor requested contact' WHERE id = ?`, conv.id);
+    run(`UPDATE chat_conversations SET status = 'escalated', escalation_reason = 'Bezoeker wil contact' WHERE id = ?`, conv.id);
     notifySafe(conv.company_id, 'chat_escalated', {
-      title: 'Chat visitor requested contact', body: `${b.name} · ${b.email || b.phone}`, link: `/app/assistant?tab=inbox&open=${conv.id}`,
+      title: 'Chatbezoeker wil contact', body: `${b.name} · ${b.email || b.phone}`, link: `/app/assistant?tab=inbox&open=${conv.id}`,
     });
   }
   res.json({ ok: true, messages: visibleMessages(conv.id, Number(req.body.after) || 0) });
@@ -164,7 +164,7 @@ router.post('/chat/:token/contact', chatLimiter, (req, res) => {
 
 // ---------------- Marketing site contact form ----------------
 router.post('/contact', limit(5, 60), async (req, res) => {
-  const b = parse(z.object({ name: v.name, email: v.email, company: v.optText(120), message: v.text(4000).min(10, 'must be at least 10 characters'), website: z.string().max(0).optional() }), req.body);
+  const b = parse(z.object({ name: v.name, email: v.email, company: v.optText(120), message: v.text(4000).min(10, 'moet minimaal 10 tekens hebben'), website: z.string().max(0).optional() }), req.body);
   run('INSERT INTO contact_requests (name, email, company, message) VALUES (?, ?, ?, ?)', b.name, b.email, b.company, b.message);
   if (process.env.SALES_INBOX) await sendEmail(null, process.env.SALES_INBOX, `CLEANFLOW contact: ${b.name}`, `${b.name} <${b.email}> ${b.company || ''}\n\n${b.message}`);
   res.status(201).json({ ok: true });

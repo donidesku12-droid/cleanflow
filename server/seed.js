@@ -9,7 +9,7 @@
 import { one, run, all, tx } from './db.js';
 import { hashPassword } from './lib/auth.js';
 import { provisionCompany } from './routes/auth.js';
-import { DEFAULT_WORK_SCHEDULE, addDays, addMinutes, todayIn, weekdayOf, bookingReference, nowIn } from './lib/core.js';
+import { DEFAULT_WORK_SCHEDULE, addDays, addMinutes, todayIn, weekdayOf, bookingReference, nowIn, fmtShort } from './lib/core.js';
 
 const DEMO_SLUG = 'sparkle-shine-demo';
 const PASSWORD = 'Demo1234';
@@ -24,7 +24,7 @@ const FIRST = ['Emma', 'Liam', 'Sophie', 'Noah', 'Julia', 'Lucas', 'Mila', 'Daan
 const LAST = ['de Vries', 'Jansen', 'Bakker', 'Visser', 'Smit', 'Meijer', 'Mulder', 'de Boer', 'Bos', 'Vos', 'Peters', 'Hendriks', 'Dekker', 'Brouwer', 'Kok', 'Jacobs', 'van Dijk', 'Schouten', 'Willems', 'Maas'];
 const STREETS = ['Keizersgracht', 'Prinsengracht', 'Herengracht', 'Vondelstraat', 'Overtoom', 'Ceintuurbaan', 'Javastraat', 'Haarlemmerweg', 'Kinkerstraat', 'Amstelveenseweg', 'Van Baerlestraat', 'Ferdinand Bolstraat'];
 const CITIES = ['Amsterdam', 'Amsterdam', 'Amsterdam', 'Amstelveen', 'Diemen', 'Haarlem'];
-const NOTES = [null, null, null, 'Has a friendly dog – please close the garden gate.', 'Key is with the neighbour at no. 12.', 'Prefers eco-friendly products.', 'Allergic to strong fragrances.', 'Parking available in front of the house.', 'Please remove shoes inside.'];
+const NOTES = [null, null, null, 'Heeft een lieve hond – graag het tuinhek dichtdoen.', 'Sleutel ligt bij de buren op nr. 12.', 'Liever milieuvriendelijke middelen.', 'Allergisch voor sterke geuren.', 'Parkeren kan voor de deur.', 'Graag schoenen uit in huis.'];
 
 async function seed() {
   const existing = one('SELECT id FROM companies WHERE slug = ?', DEMO_SLUG);
@@ -34,7 +34,7 @@ async function seed() {
     if (existing) run('DELETE FROM companies WHERE id = ?', existing.id);
     run(`DELETE FROM users WHERE email IN ('demo@cleanflow.app','manager@cleanflow.app','employee@cleanflow.app')`);
 
-    const cid = provisionCompany({ companyName: 'Sparkle & Shine Cleaning (Demo)', plan: 'business', isDemo: true });
+    const cid = provisionCompany({ companyName: 'Sparkle & Shine Schoonmaak (Demo)', plan: 'business', isDemo: true });
     run(`UPDATE companies SET slug = ?, email = 'hello@sparkle-shine.example', phone = '+31 20 555 0142', website = 'https://sparkle-shine.example',
          address = 'Overtoom 120', city = 'Amsterdam', postal_code = '1054 HN', country = 'Netherlands', min_notice_hours = 12 WHERE id = ?`, DEMO_SLUG, cid);
     run(`UPDATE subscriptions SET trial_ends_at = ? WHERE company_id = ?`, new Date(Date.now() + 365 * 864e5).toISOString(), cid);
@@ -44,8 +44,8 @@ async function seed() {
 
     // --- Employees
     const team = [
-      ['Maria Santos', 'Team Lead', '#10b981'], ['Jonas de Wit', 'Senior Cleaner', '#0ea5e9'], ['Aisha Bakr', 'Cleaner', '#8b5cf6'],
-      ['Pieter Kramer', 'Window Specialist', '#f59e0b'], ['Lena Vogel', 'Cleaner', '#ec4899'],
+      ['Maria Santos', 'Teamleider', '#10b981'], ['Jonas de Wit', 'Senior schoonmaker', '#0ea5e9'], ['Aisha Bakr', 'Schoonmaker', '#8b5cf6'],
+      ['Pieter Kramer', 'Glazenwasser', '#f59e0b'], ['Lena Vogel', 'Schoonmaker', '#ec4899'],
     ];
     const employees = team.map(([name, title, color], i) => {
       const sched = structuredClone(DEFAULT_WORK_SCHEDULE);
@@ -81,7 +81,7 @@ async function seed() {
     }
 
     // --- Bookings: 210 days back, 21 days forward. Per employee per day, sequential non-overlapping jobs.
-    const instructions = [null, null, 'Please focus on the kitchen.', 'Bring extra microfibre cloths.', 'Ring the bell twice.', 'Windows inside only this time.'];
+    const instructions = [null, null, 'Graag extra aandacht voor de keuken.', 'Neem extra microvezeldoekjes mee.', 'Twee keer aanbellen.', 'Deze keer alleen de ramen binnen.'];
     const insertBooking = (b) => Number(run(`INSERT INTO bookings (company_id, reference, customer_id, service_id, employee_id, starts_at, ends_at, address, instructions, status, price_cents, source, cancel_reason, completed_at, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, cid, bookingReference(), b.customer, b.service.id, b.employee, b.start, b.end, b.address, b.instructions, b.status,
     b.price, b.source, b.cancel ?? null, b.completed ?? null, b.created).lastInsertRowid);
@@ -112,7 +112,7 @@ async function seed() {
           else status = chance(0.05) ? 'cancelled' : 'confirmed';
           const id = insertBooking({
             customer: cust.id, service, employee: emp.id, start, end, address: `${addr.address}, ${addr.city}`, instructions: pick(instructions),
-            status, price, source, cancel: status === 'cancelled' ? pick(['Customer request', 'Customer is ill', 'Rescheduled by phone']) : null,
+            status, price, source, cancel: status === 'cancelled' ? pick(['Op verzoek van klant', 'Klant is ziek', 'Telefonisch verzet']) : null,
             completed: status === 'completed' ? `${date} ${end.slice(11)}:00` : null, created: `${addDays(date, -Math.floor(rand() * 10) - 1)} 12:00:00`,
           });
           if (status === 'completed' && chance(0.96)) {
@@ -142,9 +142,9 @@ async function seed() {
         instructions: pick(instructions), status: 'pending', price: service.price_cents, source: 'online', created: `${today} 08:${String(10 + added).padStart(2, '0')}:00` });
       const ref = one('SELECT reference FROM bookings WHERE id = ?', id).reference;
       run(`INSERT INTO notifications (company_id, type, title, body, link, created_at) VALUES (?, 'booking_new', ?, ?, ?, datetime('now', ?))`,
-        cid, `New booking request: ${service.name}`, `${ref} · ${start}`, `/app/bookings?open=${id}`, `-${added * 47 + 5} minutes`);
+        cid, `Nieuwe aanvraag: ${service.name}`, `${ref} · ${fmtShort(start)}`, `/app/bookings?open=${id}`, `-${added * 47 + 5} minutes`);
       run(`INSERT INTO activity_log (company_id, action, entity, entity_id, summary, created_at) VALUES (?, 'requested', 'booking', ?, ?, datetime('now', ?))`,
-        cid, id, `A customer requested ${service.name} online for ${start}`, `-${added * 47 + 5} minutes`);
+        cid, id, `Een klant heeft online ${service.name} aangevraagd voor ${fmtShort(start)}`, `-${added * 47 + 5} minutes`);
       added++;
     }
 
@@ -155,48 +155,48 @@ async function seed() {
       const offset = `-${(i + 1) * 3} hours`;
       if (b.status === 'completed') {
         run(`INSERT INTO activity_log (company_id, action, entity, entity_id, summary, created_at) VALUES (?, 'completed', 'booking', ?, ?, datetime('now', ?))`,
-          cid, b.id, `${b.en} completed ${b.sn} for ${b.cn}`, offset);
+          cid, b.id, `${b.en} heeft ${b.sn} voor ${b.cn} afgerond`, offset);
         if (i < 3) run(`INSERT INTO notifications (company_id, type, title, body, link, created_at) VALUES (?, 'job_completed', ?, ?, ?, datetime('now', ?))`,
-          cid, `Job completed: ${b.reference}`, `${b.en} completed ${b.sn} for ${b.cn}`, `/app/bookings?open=${b.id}`, offset);
+          cid, `Klus afgerond: ${b.reference}`, `${b.en} heeft ${b.sn} voor ${b.cn} afgerond`, `/app/bookings?open=${b.id}`, offset);
       } else {
         run(`INSERT INTO activity_log (company_id, action, entity, entity_id, summary, created_at) VALUES (?, 'cancelled', 'booking', ?, ?, datetime('now', ?))`,
-          cid, b.id, `Booking ${b.reference} for ${b.cn} was cancelled`, offset);
+          cid, b.id, `Boeking ${b.reference} van ${b.cn} is geannuleerd`, offset);
       }
     });
 
     // --- AI assistant knowledge
-    run(`UPDATE ai_settings SET assistant_name = 'Flo', languages = '["en","nl","de"]',
-      welcome_message = 'Hi! I''m Flo, the virtual assistant of Sparkle & Shine Cleaning. Ask me about our services, prices and opening hours, or request an appointment.',
-      company_info = 'Sparkle & Shine Cleaning is a family-run cleaning company founded in 2016 in Amsterdam. All cleaners are employed by us (no subcontractors), background-checked and insured. We bring our own professional equipment and eco-certified products.',
-      policies = 'Cancellation: free up to 24 hours before the appointment; later cancellations are charged 50% of the service price.\nPayment: card or bank transfer after the job; cash is accepted.\nSatisfaction: if something was missed, tell us within 24 hours and we return to fix it free of charge.',
-      service_area = 'Amsterdam, Amstelveen, Diemen and Haarlem.',
-      escalation_message = 'A member of our team will reply within one business day. You can also call us on +31 20 555 0142.'
+    run(`UPDATE ai_settings SET assistant_name = 'Flo', languages = '["nl","en","de"]',
+      welcome_message = 'Hoi! Ik ben Flo, de virtuele assistent van Sparkle & Shine Schoonmaak. Vraag me naar onze diensten, prijzen en openingstijden, of vraag een afspraak aan.',
+      company_info = 'Sparkle & Shine Schoonmaak is een familiebedrijf, opgericht in 2016 in Amsterdam. Al onze schoonmakers zijn bij ons in dienst (geen onderaannemers), gescreend en verzekerd. We nemen ons eigen professionele materiaal en milieukeur-schoonmaakmiddelen mee.',
+      policies = 'Annuleren: gratis tot 24 uur voor de afspraak; bij later annuleren rekenen we 50% van de prijs.\nBetalen: met pin of per overboeking na de klus; contant mag ook.\nTevredenheid: is er iets vergeten? Laat het binnen 24 uur weten, dan komen we het gratis herstellen.',
+      service_area = 'Amsterdam, Amstelveen, Diemen en Haarlem.',
+      escalation_message = 'Een collega reageert binnen één werkdag. Je kunt ons ook bellen op +31 20 555 0142.'
       WHERE company_id = ?`, cid);
     const faqs = [
-      ['Do I need to be home during the cleaning?', 'No. Many customers give us a key or access code. Keys are stored securely and labelled with a code, never your address.'],
-      ['Do you bring your own cleaning supplies?', 'Yes. We bring all equipment and eco-certified cleaning products. If you prefer we use your products, just add it to the booking instructions.'],
-      ['Are your cleaners insured?', 'Yes. All our cleaners are employed by Sparkle & Shine, background-checked and covered by our liability insurance.'],
-      ['How do I cancel or reschedule?', 'Cancelling or rescheduling is free up to 24 hours before your appointment. Reply to your confirmation email or call us on +31 20 555 0142.'],
-      ['Which areas do you serve?', 'We clean in Amsterdam, Amstelveen, Diemen and Haarlem.'],
+      ['Moet ik thuis zijn tijdens de schoonmaak?', 'Nee. Veel klanten geven ons een sleutel of toegangscode. Sleutels bewaren we veilig, met een code erop en nooit je adres.'],
+      ['Nemen jullie zelf schoonmaakmiddelen mee?', 'Ja. We nemen al het materiaal en milieukeur-schoonmaakmiddelen mee. Wil je dat we jouw middelen gebruiken? Zet het dan bij de bijzonderheden van je boeking.'],
+      ['Zijn jullie schoonmakers verzekerd?', 'Ja. Al onze schoonmakers zijn in dienst bij Sparkle & Shine, gescreend en gedekt door onze aansprakelijkheidsverzekering.'],
+      ['Hoe kan ik annuleren of verzetten?', 'Annuleren of verzetten is gratis tot 24 uur voor je afspraak. Reageer op je bevestigingsmail of bel ons op +31 20 555 0142.'],
+      ['In welke plaatsen werken jullie?', 'We maken schoon in Amsterdam, Amstelveen, Diemen en Haarlem.'],
     ];
     for (const [q, a] of faqs) run('INSERT INTO faqs (company_id, question, answer) VALUES (?, ?, ?)', cid, q, a);
 
     // --- Example escalated conversation in the inbox
     const conv = Number(run(`INSERT INTO chat_conversations (company_id, public_token, visitor_name, visitor_email, contact_consent, status, escalation_reason, created_at, updated_at)
-      VALUES (?, ?, 'Robin', 'robin@example.com', 1, 'escalated', 'Custom quote request', datetime('now','-2 hours'), datetime('now','-2 hours'))`, cid, `demo-${Date.now()}`).lastInsertRowid);
+      VALUES (?, ?, 'Robin', 'robin@example.com', 1, 'escalated', 'Offerte op maat gevraagd', datetime('now','-2 hours'), datetime('now','-2 hours'))`, cid, `demo-${Date.now()}`).lastInsertRowid);
     for (const [role, content] of [
-      ['visitor', 'Hi, can you clean a 300 m² office every weekday evening? What would that cost?'],
-      ['assistant', 'Office cleaning is listed at €45.00 per hour. A fixed quote for a 300 m² office on weekday evenings needs our team, so I\'ve passed your question on. A member of our team will reply within one business day.'],
-      ['assistant', 'Thanks Robin! I\'ve shared your contact details with the team so they can follow up with you.'],
+      ['visitor', 'Hoi, kunnen jullie een kantoor van 300 m² elke doordeweekse avond schoonmaken? Wat kost dat?'],
+      ['assistant', 'Kantoorschoonmaak kost € 45,00 per uur. Voor een vaste prijs voor 300 m² op doordeweekse avonden is ons team nodig, dus ik heb je vraag doorgestuurd. Een collega reageert binnen één werkdag.'],
+      ['assistant', 'Bedankt Robin! Ik heb je contactgegevens doorgegeven aan het team, zodat ze contact met je kunnen opnemen.'],
     ]) run(`INSERT INTO chat_messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, datetime('now','-2 hours'))`, conv, role, content);
-    run(`INSERT INTO notifications (company_id, type, title, body, link, created_at) VALUES (?, 'chat_escalated', 'Chat needs a human reply', 'Custom quote request – “Hi, can you clean a 300 m² office…”', ?, datetime('now','-2 hours'))`,
+    run(`INSERT INTO notifications (company_id, type, title, body, link, created_at) VALUES (?, 'chat_escalated', 'Chat wacht op antwoord van een mens', 'Offerte op maat gevraagd – “Hoi, kunnen jullie een kantoor van 300 m²…”', ?, datetime('now','-2 hours'))`,
       cid, `/app/assistant?tab=inbox&open=${conv}`);
   });
   const c = one('SELECT id FROM companies WHERE slug = ?', DEMO_SLUG);
   const counts = one(`SELECT (SELECT COUNT(*) FROM bookings WHERE company_id = ?) b, (SELECT COUNT(*) FROM customers WHERE company_id = ?) c`, c.id, c.id);
-  console.log(`Demo workspace ready: ${counts.c} customers, ${counts.b} bookings.`);
-  console.log(`Log in with demo@cleanflow.app / ${PASSWORD} (owner), manager@cleanflow.app or employee@cleanflow.app.`);
-  console.log(`Public booking page: /book/${DEMO_SLUG}`);
+  console.log(`Demo-omgeving klaar: ${counts.c} klanten, ${counts.b} boekingen.`);
+  console.log(`Log in met demo@cleanflow.app / ${PASSWORD} (eigenaar), manager@cleanflow.app of employee@cleanflow.app.`);
+  console.log(`Openbare boekingspagina: /book/${DEMO_SLUG}`);
 }
 
 seed().catch((err) => { console.error(err); process.exit(1); });

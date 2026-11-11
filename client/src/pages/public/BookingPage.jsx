@@ -9,8 +9,8 @@ import { Button, Input, Textarea, Checkbox, PageLoader, Spinner, ErrorState, cx,
 import ChatLauncher from '../../components/ChatWidget.jsx';
 import Logo from '../../components/Logo.jsx';
 
-const STEPS = ['Service', 'Date & time', 'Your details', 'Review'];
-const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const STEPS = ['Dienst', 'Datum & tijd', 'Je gegevens', 'Controleren'];
+const DAY_LABELS = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
 
 function Calendar({ month, setMonth, available, selected, onSelect, today, maxDate, loading }) {
   const first = `${month}-01`;
@@ -18,13 +18,13 @@ function Calendar({ month, setMonth, available, selected, onSelect, today, maxDa
   const daysInMonth = new Date(Date.UTC(+month.slice(0, 4), +month.slice(5, 7), 0)).getUTCDate();
   const cells = [...Array(startIdx).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`)];
   const shift = (n) => { const d = new Date(`${first}T12:00:00Z`); d.setUTCMonth(d.getUTCMonth() + n); setMonth(d.toISOString().slice(0, 7)); };
-  const label = new Date(`${first}T12:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const label = new Date(`${first}T12:00:00Z`).toLocaleDateString('nl-NL', { month: 'long', year: 'numeric', timeZone: 'UTC' });
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <button onClick={() => shift(-1)} disabled={month <= today.slice(0, 7)} className="rounded-lg p-2 hover:bg-navy-50 disabled:opacity-30" aria-label="Previous month"><ChevronLeft className="size-5" /></button>
+        <button onClick={() => shift(-1)} disabled={month <= today.slice(0, 7)} className="rounded-lg p-2 hover:bg-navy-50 disabled:opacity-30" aria-label="Vorige maand"><ChevronLeft className="size-5" /></button>
         <p className="flex items-center gap-2 font-semibold">{label}{loading && <Spinner className="size-4" />}</p>
-        <button onClick={() => shift(1)} disabled={month >= maxDate.slice(0, 7)} className="rounded-lg p-2 hover:bg-navy-50 disabled:opacity-30" aria-label="Next month"><ChevronRight className="size-5" /></button>
+        <button onClick={() => shift(1)} disabled={month >= maxDate.slice(0, 7)} className="rounded-lg p-2 hover:bg-navy-50 disabled:opacity-30" aria-label="Volgende maand"><ChevronRight className="size-5" /></button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center">
         {DAY_LABELS.map((d) => <div key={d} className="py-1 text-xs font-semibold text-navy-400">{d}</div>)}
@@ -64,7 +64,7 @@ export default function BookingPage() {
 
   const load = () => api.get(`/public/company/${slug}`).then((d) => { setInfo(d); setMonth(d.company.today.slice(0, 7)); }).catch(setLoadError);
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [slug]);
-  useEffect(() => { if (info) document.title = `Book a cleaning – ${info.company.name}`; }, [info]);
+  useEffect(() => { if (info) document.title = `Schoonmaak boeken – ${info.company.name}`; }, [info]);
 
   const today = info?.company.today;
   const maxDate = today ? addDaysStr(today, info.company.booking_horizon_days) : null;
@@ -92,11 +92,11 @@ export default function BookingPage() {
 
   const validateDetails = () => {
     const v = form.values; const e = {};
-    if (!v.name.trim()) e.name = 'Please enter your name';
-    if (!/^\S+@\S+\.\S+$/.test(v.email)) e.email = 'Please enter a valid email address';
-    if (!/^[+()\d\s.-]{6,32}$/.test(v.phone)) e.phone = 'Please enter a valid phone number';
-    if (v.address.trim().length < 3) e.address = 'Please enter the address to be cleaned';
-    if (!v.privacy_consent) e.privacy_consent = 'Please agree so we can process your request';
+    if (!v.name.trim()) e.name = 'Vul je naam in';
+    if (!/^\S+@\S+\.\S+$/.test(v.email)) e.email = 'Vul een geldig e-mailadres in';
+    if (!/^[+()\d\s.-]{6,32}$/.test(v.phone)) e.phone = 'Vul een geldig telefoonnummer in';
+    if (v.address.trim().length < 3) e.address = 'Vul het adres in waar schoongemaakt moet worden';
+    if (!v.privacy_consent) e.privacy_consent = 'Geef toestemming, anders kunnen we je aanvraag niet verwerken';
     form.setErrors(e);
     return !Object.keys(e).length;
   };
@@ -115,7 +115,7 @@ export default function BookingPage() {
 
   const hours = useMemo(() => info && ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((d, i) => [DAY_LABELS[i], info.company.opening_hours[d]]), [info]);
 
-  if (loadError) return <div className="min-h-screen pt-20"><ErrorState error={loadError.status === 404 ? { message: 'This booking page does not exist.' } : loadError} /></div>;
+  if (loadError) return <div className="min-h-screen pt-20"><ErrorState error={loadError.status === 404 ? { message: 'Deze boekingspagina bestaat niet.' } : loadError} /></div>;
   if (!info) return <PageLoader />;
   const c = info.company;
 
@@ -130,26 +130,26 @@ export default function BookingPage() {
           {c.phone && <a href={`tel:${c.phone}`} className="hidden items-center gap-2 text-sm font-medium text-navy-500 hover:text-navy-900 sm:flex"><Phone className="size-4" />{c.phone}</a>}
         </div>
       </header>
-      {c.is_demo && <div className="bg-amber-50 py-2 text-center text-xs font-medium text-amber-800">Demo company – requests made here go to the CLEANFLOW demo workspace.</div>}
+      {c.is_demo && <div className="bg-amber-50 py-2 text-center text-xs font-medium text-amber-800">Demobedrijf – aanvragen hier komen terecht in de demo-omgeving van CLEANFLOW.</div>}
 
       <div className="container-x grid gap-8 py-8 lg:grid-cols-3 lg:py-12">
         <main className="lg:col-span-2">
           {result ? (
             <div className="card animate-slide-up p-8 text-center sm:p-12">
               <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-100"><CheckCircle2 className="size-9 text-emerald-600" /></span>
-              <h1 className="mt-5 text-2xl font-bold">Booking request received</h1>
-              <p className="mx-auto mt-2 max-w-md text-navy-500">Thank you! {c.name} will review your request and confirm it by email. Your time slot is held while the request is reviewed.</p>
+              <h1 className="mt-5 text-2xl font-bold">Aanvraag ontvangen</h1>
+              <p className="mx-auto mt-2 max-w-md text-navy-500">Bedankt! {c.name} bekijkt je aanvraag en bevestigt die per e-mail. Je tijdslot blijft voor je gereserveerd zolang de aanvraag wordt bekeken.</p>
               <dl className="mx-auto mt-8 max-w-sm space-y-2 rounded-2xl bg-navy-50 p-5 text-left text-sm">
-                <div className="flex justify-between"><dt className="text-navy-400">Reference</dt><dd className="font-mono font-semibold">{result.reference}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-navy-400">Service</dt><dd className="text-right font-medium">{result.service}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-navy-400">When</dt><dd className="text-right font-medium">{fmtDateLong(result.starts_at)}, {result.starts_at.slice(11)}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="text-navy-400">Status</dt><dd className="font-medium text-amber-600">Awaiting confirmation</dd></div>
+                <div className="flex justify-between"><dt className="text-navy-400">Referentie</dt><dd className="font-mono font-semibold">{result.reference}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-navy-400">Dienst</dt><dd className="text-right font-medium">{result.service}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-navy-400">Wanneer</dt><dd className="text-right font-medium">{fmtDateLong(result.starts_at)}, {result.starts_at.slice(11)}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="text-navy-400">Status</dt><dd className="font-medium text-amber-600">Wacht op bevestiging</dd></div>
               </dl>
-              <Button variant="secondary" className="mt-8" onClick={() => { setResult(null); setStep(0); setService(null); setDate(null); setTime(null); form.setValues((v) => ({ ...v, instructions: '' })); }}>Make another booking</Button>
+              <Button variant="secondary" className="mt-8" onClick={() => { setResult(null); setStep(0); setService(null); setDate(null); setTime(null); form.setValues((v) => ({ ...v, instructions: '' })); }}>Nog een afspraak maken</Button>
             </div>
           ) : (
             <div className="card overflow-hidden">
-              <ol className="flex border-b border-navy-100" aria-label="Booking steps">
+              <ol className="flex border-b border-navy-100" aria-label="Stappen">
                 {STEPS.map((s, i) => (
                   <li key={s} className={cx('flex flex-1 items-center justify-center gap-2 py-3.5 text-xs font-semibold sm:text-sm', i === step ? 'text-navy-900' : i < step ? 'text-emerald-600' : 'text-navy-300')}>
                     <span className={cx('flex size-6 items-center justify-center rounded-full text-xs', i < step ? 'bg-emerald-500 text-white' : i === step ? 'bg-navy-900 text-white' : 'bg-navy-100')}>{i < step ? <Check className="size-3.5" /> : i + 1}</span>
@@ -159,12 +159,12 @@ export default function BookingPage() {
               </ol>
               <div className="p-5 sm:p-8">
                 {!c.booking_enabled ? (
-                  <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-800"><AlertCircle className="size-5 shrink-0" />Online booking is currently unavailable. Please contact {c.name} directly{c.phone ? ` on ${c.phone}` : ''}.</div>
+                  <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-800"><AlertCircle className="size-5 shrink-0" />Online boeken is op dit moment niet mogelijk. Neem direct contact op met {c.name}{c.phone ? ` via ${c.phone}` : ''}.</div>
                 ) : step === 0 ? (
                   <div className="animate-fade-in">
-                    <h1 className="text-xl font-bold">Choose a service</h1>
-                    <p className="mt-1 text-sm text-navy-500">Prices as listed by {c.name}.</p>
-                    {info.services.length === 0 ? <p className="mt-6 text-sm text-navy-400">No services are available for online booking at the moment.</p> : (
+                    <h1 className="text-xl font-bold">Kies een dienst</h1>
+                    <p className="mt-1 text-sm text-navy-500">Prijzen zoals opgegeven door {c.name}.</p>
+                    {info.services.length === 0 ? <p className="mt-6 text-sm text-navy-400">Er zijn op dit moment geen diensten online te boeken.</p> : (
                       <div className="mt-6 grid gap-3 sm:grid-cols-2">
                         {info.services.map((s) => (
                           <button key={s.id} onClick={() => chooseService(s)} className={cx('group rounded-2xl border p-5 text-left transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-soft', service?.id === s.id ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-navy-100')}>
@@ -173,7 +173,7 @@ export default function BookingPage() {
                               <p className="shrink-0 font-bold text-emerald-600">{priceLabel(s, c.currency)}</p>
                             </div>
                             {s.description && <p className="mt-1.5 line-clamp-2 text-sm text-navy-500">{s.description}</p>}
-                            <p className="mt-3 flex items-center gap-1.5 text-xs text-navy-400"><Clock className="size-3.5" />approx. {duration(s.duration_min)}</p>
+                            <p className="mt-3 flex items-center gap-1.5 text-xs text-navy-400"><Clock className="size-3.5" />ca. {duration(s.duration_min)}</p>
                           </button>
                         ))}
                       </div>
@@ -181,16 +181,16 @@ export default function BookingPage() {
                   </div>
                 ) : step === 1 ? (
                   <div className="animate-fade-in">
-                    <h2 className="text-xl font-bold">Pick a date and time</h2>
-                    <p className="mt-1 text-sm text-navy-500">Only times when a cleaner is actually available are shown.</p>
+                    <h2 className="text-xl font-bold">Kies een datum en tijd</h2>
+                    <p className="mt-1 text-sm text-navy-500">Je ziet alleen tijden waarop er echt een schoonmaker beschikbaar is.</p>
                     {submitError && <div role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{submitError}</div>}
                     <div className="mt-6 grid gap-8 md:grid-cols-2">
                       <Calendar month={month} setMonth={setMonth} available={dates} selected={date} onSelect={setDate} today={today} maxDate={maxDate} loading={datesLoading} />
                       <div>
-                        <p className="mb-3 font-semibold">{date ? fmtDateLong(date) : 'Select a date'}</p>
-                        {!date ? <p className="text-sm text-navy-400">Highlighted dates have free time slots.</p>
+                        <p className="mb-3 font-semibold">{date ? fmtDateLong(date) : 'Kies een datum'}</p>
+                        {!date ? <p className="text-sm text-navy-400">Op de groene dagen zijn nog tijden vrij.</p>
                           : slots === null ? <Spinner />
-                            : slots.length === 0 ? <p className="text-sm text-navy-400">No free times left on this day. Please choose another date.</p>
+                            : slots.length === 0 ? <p className="text-sm text-navy-400">Er zijn op deze dag geen tijden meer vrij. Kies een andere datum.</p>
                               : (
                                 <div className="grid grid-cols-3 gap-2">
                                   {slots.map((t) => (
@@ -202,57 +202,57 @@ export default function BookingPage() {
                       </div>
                     </div>
                     <div className="mt-8 flex justify-between">
-                      <Button variant="ghost" icon={ArrowLeft} onClick={() => setStep(0)}>Back</Button>
-                      <Button disabled={!time} onClick={() => { setSubmitError(''); setStep(2); }}>Continue</Button>
+                      <Button variant="ghost" icon={ArrowLeft} onClick={() => setStep(0)}>Terug</Button>
+                      <Button disabled={!time} onClick={() => { setSubmitError(''); setStep(2); }}>Verder</Button>
                     </div>
                   </div>
                 ) : step === 2 ? (
                   <div className="animate-fade-in">
-                    <h2 className="text-xl font-bold">Your details</h2>
+                    <h2 className="text-xl font-bold">Je gegevens</h2>
                     <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                      <Input label="Full name" value={form.values.name} onChange={form.set('name')} error={form.errors.name} autoComplete="name" required className="sm:col-span-2" />
-                      <Input label="Email" type="email" value={form.values.email} onChange={form.set('email')} error={form.errors.email} autoComplete="email" required />
-                      <Input label="Phone" type="tel" value={form.values.phone} onChange={form.set('phone')} error={form.errors.phone} autoComplete="tel" required />
-                      <Input label="Street address" value={form.values.address} onChange={form.set('address')} error={form.errors.address} autoComplete="street-address" required className="sm:col-span-2" />
-                      <Input label="Postal code" value={form.values.postal_code} onChange={form.set('postal_code')} error={form.errors.postal_code} autoComplete="postal-code" />
-                      <Input label="City" value={form.values.city} onChange={form.set('city')} error={form.errors.city} autoComplete="address-level2" />
-                      <Textarea label="Special instructions (optional)" className="sm:col-span-2" placeholder="Access codes, pets, areas to focus on…" value={form.values.instructions} onChange={form.set('instructions')} error={form.errors.instructions} />
+                      <Input label="Volledige naam" value={form.values.name} onChange={form.set('name')} error={form.errors.name} autoComplete="name" required className="sm:col-span-2" />
+                      <Input label="E-mailadres" type="email" value={form.values.email} onChange={form.set('email')} error={form.errors.email} autoComplete="email" required />
+                      <Input label="Telefoonnummer" type="tel" value={form.values.phone} onChange={form.set('phone')} error={form.errors.phone} autoComplete="tel" required />
+                      <Input label="Straat en huisnummer" value={form.values.address} onChange={form.set('address')} error={form.errors.address} autoComplete="street-address" required className="sm:col-span-2" />
+                      <Input label="Postcode" value={form.values.postal_code} onChange={form.set('postal_code')} error={form.errors.postal_code} autoComplete="postal-code" />
+                      <Input label="Plaats" value={form.values.city} onChange={form.set('city')} error={form.errors.city} autoComplete="address-level2" />
+                      <Textarea label="Bijzonderheden (optioneel)" className="sm:col-span-2" placeholder="Toegangscodes, huisdieren, waar extra aandacht nodig is…" value={form.values.instructions} onChange={form.set('instructions')} error={form.errors.instructions} />
                       <input type="text" tabIndex={-1} autoComplete="off" className="hidden" value={form.values.website} onChange={form.set('website')} aria-hidden="true" />
                       <div className="sm:col-span-2">
-                        <Checkbox checked={form.values.privacy_consent} onChange={form.set('privacy_consent')} label={`I agree that ${c.name} stores my details to handle this booking.`} />
+                        <Checkbox checked={form.values.privacy_consent} onChange={form.set('privacy_consent')} label={`Ik ga ermee akkoord dat ${c.name} mijn gegevens bewaart om deze afspraak te regelen.`} />
                         {form.errors.privacy_consent && <p className="mt-1 text-xs font-medium text-red-600">{form.errors.privacy_consent}</p>}
                       </div>
                     </div>
                     <div className="mt-8 flex justify-between">
-                      <Button variant="ghost" icon={ArrowLeft} onClick={() => setStep(1)}>Back</Button>
-                      <Button onClick={() => validateDetails() && setStep(3)}>Review booking</Button>
+                      <Button variant="ghost" icon={ArrowLeft} onClick={() => setStep(1)}>Terug</Button>
+                      <Button onClick={() => validateDetails() && setStep(3)}>Controleren</Button>
                     </div>
                   </div>
                 ) : (
                   <div className="animate-fade-in">
-                    <h2 className="text-xl font-bold">Review your booking</h2>
-                    <p className="mt-1 text-sm text-navy-500">Please check everything before sending your request.</p>
+                    <h2 className="text-xl font-bold">Controleer je afspraak</h2>
+                    <p className="mt-1 text-sm text-navy-500">Kijk of alles klopt voordat je je aanvraag verstuurt.</p>
                     {submitError && <div role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{submitError}</div>}
                     <dl className="mt-6 divide-y divide-navy-100 rounded-2xl border border-navy-100 text-sm">
                       {[
-                        ['Service', service.name, () => setStep(0)],
-                        ['Date & time', `${fmtDateLong(date)} at ${time} (approx. ${duration(service.duration_min)})`, () => setStep(1)],
-                        ['Address', [form.values.address, form.values.postal_code, form.values.city].filter(Boolean).join(', '), () => setStep(2)],
-                        ['Contact', `${form.values.name} · ${form.values.email} · ${form.values.phone}`, () => setStep(2)],
-                        ['Instructions', form.values.instructions || '—', () => setStep(2)],
-                        ['Price', priceLabel(service, c.currency), null],
+                        ['Dienst', service.name, () => setStep(0)],
+                        ['Datum & tijd', `${fmtDateLong(date)} om ${time} (ca. ${duration(service.duration_min)})`, () => setStep(1)],
+                        ['Adres', [form.values.address, form.values.postal_code, form.values.city].filter(Boolean).join(', '), () => setStep(2)],
+                        ['Contactgegevens', `${form.values.name} · ${form.values.email} · ${form.values.phone}`, () => setStep(2)],
+                        ['Bijzonderheden', form.values.instructions || '—', () => setStep(2)],
+                        ['Prijs', priceLabel(service, c.currency), null],
                       ].map(([k, v, edit]) => (
                         <div key={k} className="flex items-start gap-4 px-5 py-3.5">
                           <dt className="w-28 shrink-0 text-navy-400">{k}</dt>
                           <dd className="flex-1 font-medium break-words">{v}</dd>
-                          {edit && <button onClick={edit} className="text-xs font-semibold text-emerald-600 hover:underline">Edit</button>}
+                          {edit && <button onClick={edit} className="text-xs font-semibold text-emerald-600 hover:underline">Wijzigen</button>}
                         </div>
                       ))}
                     </dl>
-                    {service.price_unit !== 'fixed' && <p className="mt-3 text-xs text-navy-400">The final price depends on the work required{service.price_unit === 'per_hour' ? ' and the hours worked' : ''}; {c.name} will confirm it with you.</p>}
+                    {service.price_unit !== 'fixed' && <p className="mt-3 text-xs text-navy-400">De uiteindelijke prijs hangt af van het werk{service.price_unit === 'per_hour' ? ' en het aantal gewerkte uren' : ''}; {c.name} stemt dit met je af.</p>}
                     <div className="mt-8 flex justify-between">
-                      <Button variant="ghost" icon={ArrowLeft} onClick={() => setStep(2)}>Back</Button>
-                      <Button size="lg" loading={submitting} onClick={submit}>Send booking request</Button>
+                      <Button variant="ghost" icon={ArrowLeft} onClick={() => setStep(2)}>Terug</Button>
+                      <Button size="lg" loading={submitting} onClick={submit}>Aanvraag versturen</Button>
                     </div>
                   </div>
                 )}
@@ -264,7 +264,7 @@ export default function BookingPage() {
         <aside className="space-y-6">
           {service && !result && (
             <div className="card p-5">
-              <p className="text-xs font-semibold tracking-wide text-navy-400 uppercase">Your selection</p>
+              <p className="text-xs font-semibold tracking-wide text-navy-400 uppercase">Je keuze</p>
               <p className="mt-2 font-semibold">{service.name}</p>
               <p className="text-sm text-navy-500">{priceLabel(service, c.currency)} · {duration(service.duration_min)}</p>
               {date && <p className="mt-2 flex items-center gap-2 text-sm"><CalendarDays className="size-4 text-emerald-500" />{fmtDateLong(date)}{time && `, ${time}`}</p>}
@@ -277,12 +277,12 @@ export default function BookingPage() {
               {c.phone && <p className="flex gap-2"><Phone className="size-4 shrink-0 text-navy-300" /><a href={`tel:${c.phone}`} className="hover:text-navy-900">{c.phone}</a></p>}
               {c.email && <p className="flex gap-2"><Mail className="size-4 shrink-0 text-navy-300" /><a href={`mailto:${c.email}`} className="break-all hover:text-navy-900">{c.email}</a></p>}
             </div>
-            <p className="mt-5 text-xs font-semibold tracking-wide text-navy-400 uppercase">Opening hours</p>
+            <p className="mt-5 text-xs font-semibold tracking-wide text-navy-400 uppercase">Openingstijden</p>
             <dl className="mt-2 space-y-1 text-sm">
-              {hours.map(([d, h]) => <div key={d} className="flex justify-between"><dt className="text-navy-500">{d}</dt><dd className={h.closed ? 'text-navy-300' : 'font-medium'}>{h.closed ? 'Closed' : `${h.open} – ${h.close}`}</dd></div>)}
+              {hours.map(([d, h]) => <div key={d} className="flex justify-between"><dt className="text-navy-500">{d}</dt><dd className={h.closed ? 'text-navy-300' : 'font-medium'}>{h.closed ? 'Gesloten' : `${h.open} – ${h.close}`}</dd></div>)}
             </dl>
           </div>
-          <p className="flex items-center justify-center gap-1.5 text-xs text-navy-400">Powered by <a href="/" className="inline-flex"><Logo size="size-5" className="scale-90" /></a></p>
+          <p className="flex items-center justify-center gap-1.5 text-xs text-navy-400">Mogelijk gemaakt door <a href="/" className="inline-flex"><Logo size="size-5" className="scale-90" /></a></p>
         </aside>
       </div>
       {info.assistant && <ChatLauncher slug={slug} assistantName={info.assistant.name} welcome={info.assistant.welcome} onBook={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); if (!result) setStep(service ? 1 : 0); }} />}

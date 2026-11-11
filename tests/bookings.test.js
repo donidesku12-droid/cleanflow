@@ -14,7 +14,7 @@ const publicBooking = (slug, serviceId, date, time, extra = {}) => client(srv.ba
 async function setup() {
   const owner = await signup(srv.base, { plan: 'business' });
   const services = (await owner.c.get('/services')).data.services;
-  const regular = services.find((s) => s.name === 'Regular home cleaning'); // 150 min
+  const regular = services.find((s) => s.name === 'Reguliere huishoudelijke schoonmaak'); // 150 min
   return { ...owner, slug: owner.company.slug, regular };
 }
 
@@ -87,7 +87,7 @@ test('capacity follows employee schedules; owner manages the full lifecycle', as
   assert.equal((await c.patch(`/bookings/${p1.id}`, { employee_id: e1.id })).status, 200);
   const conflict = await c.patch(`/bookings/${p2.id}`, { employee_id: e1.id });
   assert.equal(conflict.status, 409, 'same employee cannot be double-booked');
-  assert.match(conflict.data.error, /already has a job/);
+  assert.match(conflict.data.error, /heeft op dat moment al een klus/);
   assert.equal((await c.patch(`/bookings/${p2.id}`, { employee_id: e2.id })).status, 200);
 
   // Employee on leave: their schedule no longer counts.
@@ -143,12 +143,12 @@ test('manual booking by owner with a new customer, and customer management', asy
 
 test('services: CRUD, deactivation hides from booking page, prices validated', async () => {
   const { c, slug } = await setup();
-  const created = await c.post('/services', { name: 'Carpet cleaning', price: 99.5, duration_min: 90, price_unit: 'fixed' });
+  const created = await c.post('/services', { name: 'Tapijtreiniging', price: 99.5, duration_min: 90, price_unit: 'fixed' });
   assert.equal(created.data.service.price_cents, 9950);
   assert.equal((await c.post('/services', { name: 'Bad', price: -1, duration_min: 60 })).status, 400);
   await c.patch(`/services/${created.data.service.id}`, { active: false });
   const pub = (await client(srv.base).get(`/public/company/${slug}`)).data.services;
-  assert.ok(!pub.some((s) => s.name === 'Carpet cleaning'));
+  assert.ok(!pub.some((s) => s.name === 'Tapijtreiniging'));
   assert.equal((await client(srv.base).get(`/public/company/${slug}/slots?service_id=${created.data.service.id}&date=${futureWeekday(3)}`)).status, 404);
   assert.equal((await c.del(`/services/${created.data.service.id}`)).status, 200);
   assert.ok(db.one('SELECT COUNT(*) n FROM services').n > 0);

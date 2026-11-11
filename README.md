@@ -1,6 +1,6 @@
 # CLEANFLOW
 
-All-in-one business management platform for professional cleaning companies: online booking, customers, employees, AI customer support, analytics, notifications and subscriptions.
+All-in-one business management platform for professional cleaning companies: online booking, customers, employees, AI customer support, analytics, notifications and subscriptions. The interface, emails and AI assistant are in Dutch.
 
 ## Quick start
 
@@ -10,7 +10,7 @@ npm run seed      # loads the clearly-labelled demo workspace
 npm run dev       # API on :3001, web app on http://localhost:5173
 ```
 
-Demo logins (password `Demo1234`): `demo@cleanflow.app` (owner), `manager@cleanflow.app`, `employee@cleanflow.app`.
+Demo logins (password `Demo1234`): `demo@cleanflow.app` (eigenaar), `manager@cleanflow.app`, `employee@cleanflow.app`.
 Public booking page: `http://localhost:5173/book/sparkle-shine-demo` · Chat page: `/chat/sparkle-shine-demo`.
 
 Production: `npm run build && APP_URL=https://your.domain npm start` (serves the built app and API from one Node process, port `PORT`). It must sit behind HTTPS, because session cookies are `Secure` in production.

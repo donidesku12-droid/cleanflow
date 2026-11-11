@@ -22,9 +22,9 @@ function Shell({ title, subtitle, children, footer }) {
       <div className="relative hidden overflow-hidden bg-navy-900 lg:block">
         <div className="absolute inset-0 bg-[radial-gradient(40rem_30rem_at_80%_20%,rgba(16,185,129,0.3),transparent)]" />
         <div className="relative flex h-full flex-col justify-center px-16 text-white">
-          <h2 className="max-w-md text-4xl font-extrabold leading-tight">One calm place for your whole cleaning business.</h2>
+          <h2 className="max-w-md text-4xl font-extrabold leading-tight">Je hele schoonmaakbedrijf overzichtelijk op één plek.</h2>
           <ul className="mt-10 space-y-5">
-            {[[CalendarCheck, 'Online booking without double bookings'], [Bot, 'AI support grounded in your own information'], [ShieldCheck, 'A private, secure workspace for your company']].map(([Icon, t]) => (
+            {[[CalendarCheck, 'Online boeken zonder dubbele boekingen'], [Bot, 'AI-klantenservice op basis van je eigen gegevens'], [ShieldCheck, 'Een privé, beveiligde omgeving voor je bedrijf']].map(([Icon, t]) => (
               <li key={t} className="flex items-center gap-4 text-navy-200"><span className="flex size-10 items-center justify-center rounded-xl bg-white/10"><Icon className="size-5 text-emerald-400" /></span>{t}</li>
             ))}
           </ul>
@@ -57,21 +57,21 @@ function Login() {
   const fillDemo = (email) => set('email')(email) || set('password')('Demo1234');
 
   return (
-    <Shell title="Welcome back" subtitle="Log in to your CLEANFLOW workspace." footer={<>New to CLEANFLOW? <Link to="/signup" className="font-semibold text-emerald-600 hover:underline">Start your free trial</Link></>}>
+    <Shell title="Welkom terug" subtitle="Log in op je CLEANFLOW-account." footer={<>Nieuw bij CLEANFLOW? <Link to="/signup" className="font-semibold text-emerald-600 hover:underline">Probeer het 14 dagen gratis</Link></>}>
       <form onSubmit={submit} className="space-y-4" noValidate>
         {error && <div role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-        <Input label="Email" type="email" autoComplete="email" value={values.email} onChange={set('email')} error={errors.email} required />
+        <Input label="E-mailadres" type="email" autoComplete="email" value={values.email} onChange={set('email')} error={errors.email} required />
         <div>
-          <Input label="Password" type="password" autoComplete="current-password" value={values.password} onChange={set('password')} error={errors.password} required />
-          <div className="mt-2 text-right"><Link to="/forgot-password" className="text-sm font-medium text-emerald-600 hover:underline">Forgot password?</Link></div>
+          <Input label="Wachtwoord" type="password" autoComplete="current-password" value={values.password} onChange={set('password')} error={errors.password} required />
+          <div className="mt-2 text-right"><Link to="/forgot-password" className="text-sm font-medium text-emerald-600 hover:underline">Wachtwoord vergeten?</Link></div>
         </div>
-        <Button type="submit" size="lg" className="w-full" loading={loading}>Log in</Button>
+        <Button type="submit" size="lg" className="w-full" loading={loading}>Inloggen</Button>
       </form>
       <div className="mt-8 rounded-2xl border border-dashed border-navy-200 p-4">
-        <p className="text-xs font-semibold tracking-wide text-navy-400 uppercase">Explore the demo workspace</p>
-        <p className="mt-1 text-xs text-navy-400">Sample company with demo data. Password: Demo1234</p>
+        <p className="text-xs font-semibold tracking-wide text-navy-400 uppercase">Bekijk de demo-omgeving</p>
+        <p className="mt-1 text-xs text-navy-400">Voorbeeldbedrijf met demogegevens. Wachtwoord: Demo1234</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {[['Owner', 'demo@cleanflow.app'], ['Manager', 'manager@cleanflow.app'], ['Employee', 'employee@cleanflow.app']].map(([r, em]) => (
+          {[['Eigenaar', 'demo@cleanflow.app'], ['Manager', 'manager@cleanflow.app'], ['Medewerker', 'employee@cleanflow.app']].map(([r, em]) => (
             <Button key={r} size="sm" variant="secondary" onClick={() => fillDemo(em)}>{r}</Button>
           ))}
         </div>
@@ -102,20 +102,20 @@ function Signup() {
   };
 
   return (
-    <Shell title="Start your free trial" subtitle="14 days free. No credit card required." footer={<>Already have an account? <Link to="/login" className="font-semibold text-emerald-600 hover:underline">Log in</Link></>}>
+    <Shell title="Probeer CLEANFLOW gratis" subtitle="14 dagen gratis. Geen creditcard nodig." footer={<>Heb je al een account? <Link to="/login" className="font-semibold text-emerald-600 hover:underline">Inloggen</Link></>}>
       <form onSubmit={submit} className="space-y-4" noValidate>
         {error && <div role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-        <Input label="Company name" value={values.companyName} onChange={set('companyName')} error={errors.companyName} autoComplete="organization" required />
-        <Input label="Your name" value={values.name} onChange={set('name')} error={errors.name} autoComplete="name" required />
-        <Input label="Work email" type="email" value={values.email} onChange={set('email')} error={errors.email} autoComplete="email" required />
-        <Input label="Password" type="password" value={values.password} onChange={set('password')} error={errors.password} autoComplete="new-password" hint="At least 8 characters, including a letter and a number." required />
-        <Select label="Plan for your trial" value={values.plan} onChange={set('plan')}>
-          {PLANS.map((p) => <option key={p.id} value={p.id}>{p.name} – €{p.price}/month after trial</option>)}
+        <Input label="Bedrijfsnaam" value={values.companyName} onChange={set('companyName')} error={errors.companyName} autoComplete="organization" required />
+        <Input label="Je naam" value={values.name} onChange={set('name')} error={errors.name} autoComplete="name" required />
+        <Input label="Zakelijk e-mailadres" type="email" value={values.email} onChange={set('email')} error={errors.email} autoComplete="email" required />
+        <Input label="Wachtwoord" type="password" value={values.password} onChange={set('password')} error={errors.password} autoComplete="new-password" hint="Minimaal 8 tekens, met een letter en een cijfer." required />
+        <Select label="Abonnement voor je proefperiode" value={values.plan} onChange={set('plan')}>
+          {PLANS.map((p) => <option key={p.id} value={p.id}>{p.name} – €{p.price}/maand na de proefperiode</option>)}
         </Select>
         <Checkbox checked={values.acceptTerms} onChange={set('acceptTerms')}
-          label={<>I agree to the <a href="/legal/terms" target="_blank" className="font-medium text-emerald-600 hover:underline">Terms</a> and <a href="/legal/privacy" target="_blank" className="font-medium text-emerald-600 hover:underline">Privacy Policy</a>.</>} />
+          label={<>Ik ga akkoord met de <a href="/legal/terms" target="_blank" className="font-medium text-emerald-600 hover:underline">algemene voorwaarden</a> en het <a href="/legal/privacy" target="_blank" className="font-medium text-emerald-600 hover:underline">privacybeleid</a>.</>} />
         {errors.acceptTerms && <p className="text-xs font-medium text-red-600">{errors.acceptTerms}</p>}
-        <Button type="submit" size="lg" className="w-full" loading={loading}>Create my workspace</Button>
+        <Button type="submit" size="lg" className="w-full" loading={loading}>Account aanmaken</Button>
       </form>
     </Shell>
   );
@@ -131,17 +131,17 @@ function Forgot() {
     try { await api.post('/auth/forgot-password', values); setSent(true); } catch (err) { applyServerError(err); toast.error(err.message); } finally { setLoading(false); }
   };
   return (
-    <Shell title="Reset your password" subtitle="Enter your email and we'll send you a reset link." footer={<Link to="/login" className="font-semibold text-emerald-600 hover:underline">Back to log in</Link>}>
+    <Shell title="Wachtwoord herstellen" subtitle="Vul je e-mailadres in, dan sturen we je een link om een nieuw wachtwoord te kiezen." footer={<Link to="/login" className="font-semibold text-emerald-600 hover:underline">Terug naar inloggen</Link>}>
       {sent ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
           <MailCheck className="mx-auto size-10 text-emerald-500" />
-          <p className="mt-3 font-semibold">Check your inbox</p>
-          <p className="mt-1 text-sm text-navy-500">If an account exists for {values.email}, a reset link is on its way. It expires in one hour.</p>
+          <p className="mt-3 font-semibold">Kijk in je mailbox</p>
+          <p className="mt-1 text-sm text-navy-500">Als er een account bestaat voor {values.email}, is er een link naar je onderweg. Die is één uur geldig.</p>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4" noValidate>
-          <Input label="Email" type="email" value={values.email} onChange={set('email')} error={errors.email} autoComplete="email" required />
-          <Button type="submit" size="lg" className="w-full" loading={loading}>Send reset link</Button>
+          <Input label="E-mailadres" type="email" value={values.email} onChange={set('email')} error={errors.email} autoComplete="email" required />
+          <Button type="submit" size="lg" className="w-full" loading={loading}>Link versturen</Button>
         </form>
       )}
     </Shell>
@@ -166,7 +166,7 @@ function SetPassword({ mode }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (values.password !== values.confirm) return setErrors({ confirm: 'Passwords do not match' });
+    if (values.password !== values.confirm) return setErrors({ confirm: 'De wachtwoorden zijn niet hetzelfde' });
     setLoading(true); setError('');
     try {
       if (mode === 'invite') {
@@ -183,28 +183,28 @@ function SetPassword({ mode }) {
   if (invite === undefined) return <PageLoader />;
   if (done) {
     return (
-      <Shell title="Password updated">
+      <Shell title="Wachtwoord gewijzigd">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
           <CheckCircle2 className="mx-auto size-10 text-emerald-500" />
-          <p className="mt-3 text-sm text-navy-600">Your password has been changed and you have been signed out on all devices.</p>
-          <Button to="/login" className="mt-5">Log in</Button>
+          <p className="mt-3 text-sm text-navy-600">Je wachtwoord is gewijzigd en je bent op alle apparaten uitgelogd.</p>
+          <Button to="/login" className="mt-5">Inloggen</Button>
         </div>
       </Shell>
     );
   }
-  const title = mode === 'invite' ? (invite ? `Join ${invite.company}` : 'Invitation') : 'Choose a new password';
-  const subtitle = mode === 'invite' && invite ? `You've been invited as ${invite.role}. Set a password for ${invite.email}.` : undefined;
+  const title = mode === 'invite' ? (invite ? `Welkom bij ${invite.company}` : 'Uitnodiging') : 'Kies een nieuw wachtwoord';
+  const subtitle = mode === 'invite' && invite ? `Je bent uitgenodigd als ${{ owner: 'eigenaar', manager: 'manager', employee: 'medewerker' }[invite.role]}. Kies een wachtwoord voor ${invite.email}.` : undefined;
   return (
     <Shell title={title} subtitle={subtitle}>
       {error && <div role="alert" className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {(mode !== 'invite' || invite) && (
         <form onSubmit={submit} className="space-y-4" noValidate>
-          <Input label="New password" type="password" value={values.password} onChange={set('password')} error={errors.password} autoComplete="new-password" hint="At least 8 characters, including a letter and a number." />
-          <Input label="Confirm password" type="password" value={values.confirm} onChange={set('confirm')} error={errors.confirm} autoComplete="new-password" />
-          <Button type="submit" size="lg" className="w-full" loading={loading}>{mode === 'invite' ? 'Activate account' : 'Update password'}</Button>
+          <Input label="Nieuw wachtwoord" type="password" value={values.password} onChange={set('password')} error={errors.password} autoComplete="new-password" hint="Minimaal 8 tekens, met een letter en een cijfer." />
+          <Input label="Herhaal wachtwoord" type="password" value={values.confirm} onChange={set('confirm')} error={errors.confirm} autoComplete="new-password" />
+          <Button type="submit" size="lg" className="w-full" loading={loading}>{mode === 'invite' ? 'Account activeren' : 'Wachtwoord opslaan'}</Button>
         </form>
       )}
-      {mode !== 'invite' && <p className="mt-6 text-center text-sm"><Link to="/forgot-password" className="font-semibold text-emerald-600 hover:underline">Request a new link</Link></p>}
+      {mode !== 'invite' && <p className="mt-6 text-center text-sm"><Link to="/forgot-password" className="font-semibold text-emerald-600 hover:underline">Nieuwe link aanvragen</Link></p>}
     </Shell>
   );
 }

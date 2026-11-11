@@ -2,11 +2,14 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { all, one, run, tx } from '../db.js';
 import {
-  parse, v, idParam, notFound, forbidden, badRequest, bookingReference, logActivity, addMinutes, todayIn,
+  parse, v, idParam, notFound, forbidden, badRequest, bookingReference, logActivity, addMinutes, todayIn, fmtWhen, fmtShort,
 } from '../lib/core.js';
 import { requireRole, isStaffAdmin } from '../lib/auth.js';
 import { assertBookable, getCompany, employeeAvailability, availableSlots } from '../lib/availability.js';
 import { notifySafe } from '../lib/notify.js';
+
+const STATUS_NL = { pending: 'openstaande', confirmed: 'bevestigde', in_progress: 'lopende', completed: 'voltooide', cancelled: 'geannuleerde' };
+const STATUS_TO = { pending: 'in afwachting', confirmed: 'bevestigd', in_progress: 'bezig', completed: 'voltooid', cancelled: 'geannuleerd' };
 
 const router = Router();
 const admin = requireRole('owner', 'manager');
@@ -30,8 +33,8 @@ function shapeFor(user, b) {
 
 function loadBooking(req, id) {
   const b = one(`${BOOKING_SELECT} WHERE b.id = ? AND b.company_id = ?`, id, req.user.companyId);
-  if (!b) throw notFound('Booking');
-  if (req.user.role === 'employee' && b.employee_id !== req.user.employeeId) throw notFound('Booking');
+  if (!b) throw notFound('Boeking');
+  if (req.user.role === 'employee' && b.employee_id !== req.user.employeeId) throw notFound('Boeking');
   return b;
 }
 
@@ -68,7 +71,7 @@ router.get('/availability', admin, (req, res) => {
   const q = parse(z.object({ service_id: z.coerce.number().int(), date: v.date }), req.query);
   const company = getCompany(req.user.companyId);
   const service = one('SELECT * FROM services WHERE id = ? AND company_id = ?', q.service_id, company.id);
-  if (!service) throw notFound('Service');
+  if (!service) throw notFound('Dienst');
   res.json({ slots: availableSlots({ ...company, min_notice_hours: 0 }, service, q.date) });
 });
 
@@ -97,12 +100,12 @@ router.post('/', admin, (req, res) => {
     status: z.enum(['pending', 'confirmed']).default('confirmed'),
     price: v.money.optional(),
     allow_outside_hours: z.boolean().default(false),
-  }).refine((b) => b.customer_id || b.new_customer, { message: 'Choose a customer or add a new one', path: ['customer_id'] }), req.body);
+  }).refine((b) => b.customer_id || b.new_customer, { message: 'Kies een klant of voeg een nieuwe toe', path: ['customer_id'] }), req.body);
   const company = getCompany(req.user.companyId);
   const service = one('SELECT * FROM services WHERE id = ? AND company_id = ?', body.service_id, company.id);
-  if (!service) throw notFound('Service');
-  if (body.employee_id && !one('SELECT 1 FROM employees WHERE id = ? AND company_id = ?', body.employee_id, company.id)) throw notFound('Employee');
-  if (body.customer_id && !one('SELECT 1 FROM customers WHERE id = ? AND company_id = ?', body.customer_id, company.id)) throw notFound('Customer');
+  if (!service) throw notFound('Dienst');
+  if (body.employee_id && !one('SELECT 1 FROM employees WHERE id = ? AND company_id = ?', body.employee_id, company.id)) throw notFound('Medewerker');
+  if (body.customer_id && !one('SELECT 1 FROM customers WHERE id = ? AND company_id = ?', body.customer_id, company.id)) throw notFound('Klant');
 
   const start = `${body.date} ${body.time}`;
   const id = tx(() => {
@@ -122,7 +125,7 @@ router.post('/', admin, (req, res) => {
     return Number(info.lastInsertRowid);
   });
   const b = one(`${BOOKING_SELECT} WHERE b.id = ?`, id);
-  logActivity(company.id, req.user.id, 'created', 'booking', id, `${req.user.name} created booking ${b.reference} for ${b.customer_name}`);
+  logActivity(company.id, req.user.id, 'created', 'booking', id, `${req.user.name} heeft boeking ${b.reference} voor ${b.customer_name} aangemaakt`);
   if (b.employee_id) notifyAssignment(company, b);
   if (b.status === 'confirmed') notifyConfirmed(company, b);
   res.status(201).json({ booking: b });
@@ -142,11 +145,11 @@ router.patch('/:id', admin, (req, res) => {
   const company = getCompany(req.user.companyId);
   const before = loadBooking(req, id);
   if (['completed', 'cancelled'].includes(before.status) && (body.date || body.time || body.employee_id !== undefined || body.service_id)) {
-    throw badRequest(`A ${before.status} booking can no longer be rescheduled or reassigned.`);
+    throw badRequest(`Een ${STATUS_NL[before.status]} boeking kan niet meer worden verzet of toegewezen.`);
   }
   const service = body.service_id ? one('SELECT * FROM services WHERE id = ? AND company_id = ?', body.service_id, company.id) : one('SELECT * FROM services WHERE id = ?', before.service_id);
-  if (!service) throw notFound('Service');
-  if (body.employee_id && !one('SELECT 1 FROM employees WHERE id = ? AND company_id = ?', body.employee_id, company.id)) throw notFound('Employee');
+  if (!service) throw notFound('Dienst');
+  if (body.employee_id && !one('SELECT 1 FROM employees WHERE id = ? AND company_id = ?', body.employee_id, company.id)) throw notFound('Medewerker');
 
   const start = `${body.date ?? before.starts_at.slice(0, 10)} ${body.time ?? before.starts_at.slice(11)}`;
   const employeeId = body.employee_id !== undefined ? body.employee_id : before.employee_id;
@@ -169,16 +172,16 @@ router.patch('/:id', admin, (req, res) => {
   });
   const b = one(`${BOOKING_SELECT} WHERE b.id = ?`, id);
   if (timeChanged) {
-    logActivity(company.id, req.user.id, 'rescheduled', 'booking', id, `${req.user.name} rescheduled ${b.reference} to ${b.starts_at}`);
+    logActivity(company.id, req.user.id, 'rescheduled', 'booking', id, `${req.user.name} heeft ${b.reference} verzet naar ${fmtShort(b.starts_at)}`);
     notifySafe(company.id, 'booking_confirmed', {
-      title: `Booking ${b.reference} rescheduled`, body: `${b.customer_name} · now ${b.starts_at}`, link: `/app/bookings?open=${id}`,
+      title: `Boeking ${b.reference} verzet`, body: `${b.customer_name} · nu ${fmtShort(b.starts_at)}`, link: `/app/bookings?open=${id}`,
       emailTo: [b.customer_email], smsTo: [b.customer_phone],
-      emailSubject: `Your ${b.service_name} appointment has been rescheduled`,
-      emailBody: `Hi ${b.customer_name},\n\nYour ${b.service_name} appointment (${b.reference}) has been moved to ${b.starts_at}.\nAddress: ${b.address}\n\n${company.name}`,
+      emailSubject: `Je afspraak voor ${b.service_name} is verzet`,
+      emailBody: `Hallo ${b.customer_name},\n\nJe afspraak voor ${b.service_name} (${b.reference}) is verzet naar ${fmtWhen(b.starts_at)}.\nAdres: ${b.address}\n\nMet vriendelijke groet,\n${company.name}`,
     });
   }
   if (employeeChanged && b.employee_id) {
-    logActivity(company.id, req.user.id, 'assigned', 'booking', id, `${req.user.name} assigned ${b.employee_name} to ${b.reference}`);
+    logActivity(company.id, req.user.id, 'assigned', 'booking', id, `${req.user.name} heeft ${b.employee_name} toegewezen aan ${b.reference}`);
     notifyAssignment(company, b);
   }
   res.json({ booking: b });
@@ -203,8 +206,8 @@ router.post('/:id/status', (req, res) => {
   const b = loadBooking(req, id);
   const allowed = isStaffAdmin(req.user) ? TRANSITIONS[b.status] : (EMPLOYEE_TRANSITIONS[b.status] || []);
   if (!allowed.includes(body.status)) {
-    if (!isStaffAdmin(req.user)) throw forbidden('You can only start or complete jobs assigned to you.');
-    throw badRequest(`A ${b.status.replace('_', ' ')} booking cannot be changed to ${body.status.replace('_', ' ')}.`);
+    if (!isStaffAdmin(req.user)) throw forbidden('Je kunt alleen je eigen klussen starten of afronden.');
+    throw badRequest(`Een ${STATUS_NL[b.status]} boeking kan niet worden gewijzigd naar "${STATUS_TO[body.status]}".`);
   }
   if (body.status === 'confirmed') {
     // Re-validate availability at confirmation time (opening hours were already checked on request).
@@ -218,24 +221,25 @@ router.post('/:id/status', (req, res) => {
   }
   const fresh = one(`${BOOKING_SELECT} WHERE b.id = ?`, id);
   const verb = { confirmed: b.status === 'pending' ? 'accepted' : 'confirmed', in_progress: 'started', completed: 'completed', cancelled: b.status === 'pending' ? 'rejected' : 'cancelled', pending: 'reopened' }[body.status];
-  logActivity(company.id, req.user.id, verb, 'booking', id, `${req.user.name} ${verb} booking ${fresh.reference} (${fresh.customer_name})`);
+  const verbNl = { accepted: 'geaccepteerd', confirmed: 'bevestigd', started: 'gestart', completed: 'afgerond', rejected: 'geweigerd', cancelled: 'geannuleerd', reopened: 'heropend' }[verb];
+  logActivity(company.id, req.user.id, verb, 'booking', id, `${req.user.name} heeft boeking ${fresh.reference} (${fresh.customer_name}) ${verbNl}`);
 
   if (body.status === 'confirmed') notifyConfirmed(company, fresh);
   if (body.status === 'cancelled') {
     notifySafe(company.id, 'booking_cancelled', {
-      title: `Booking ${fresh.reference} ${verb}`, body: `${fresh.customer_name} · ${fresh.service_name} · ${fresh.starts_at}${body.reason ? ` · ${body.reason}` : ''}`,
+      title: `Boeking ${fresh.reference} ${verbNl}`, body: `${fresh.customer_name} · ${fresh.service_name} · ${fmtShort(fresh.starts_at)}${body.reason ? ` · ${body.reason}` : ''}`,
       link: `/app/bookings?open=${id}`, emailTo: [fresh.customer_email], smsTo: [fresh.customer_phone],
-      emailSubject: `Your ${fresh.service_name} appointment has been cancelled`,
-      emailBody: `Hi ${fresh.customer_name},\n\nYour ${fresh.service_name} appointment on ${fresh.starts_at} (${fresh.reference}) has been cancelled.${body.reason ? `\nReason: ${body.reason}` : ''}\n\nPlease contact us if you have any questions.\n${company.name}`,
+      emailSubject: `Je afspraak voor ${fresh.service_name} is geannuleerd`,
+      emailBody: `Hallo ${fresh.customer_name},\n\nJe afspraak voor ${fresh.service_name} op ${fmtWhen(fresh.starts_at)} (${fresh.reference}) is geannuleerd.${body.reason ? `\nReden: ${body.reason}` : ''}\n\nHeb je vragen? Neem gerust contact met ons op.\n\nMet vriendelijke groet,\n${company.name}`,
     });
     if (fresh.employee_id) {
       const user = one('SELECT id FROM users WHERE employee_id = ?', fresh.employee_id);
-      if (user) notifySafe(company.id, 'booking_cancelled', { title: `Job cancelled: ${fresh.service_name}`, body: `${fresh.starts_at} · ${fresh.address}`, link: '/app/bookings', userId: user.id });
+      if (user) notifySafe(company.id, 'booking_cancelled', { title: `Klus geannuleerd: ${fresh.service_name}`, body: `${fmtShort(fresh.starts_at)} · ${fresh.address}`, link: '/app/bookings', userId: user.id });
     }
   }
   if (body.status === 'completed') {
     notifySafe(company.id, 'job_completed', {
-      title: `Job completed: ${fresh.reference}`, body: `${fresh.employee_name || req.user.name} completed ${fresh.service_name} for ${fresh.customer_name}`,
+      title: `Klus afgerond: ${fresh.reference}`, body: `${fresh.employee_name || req.user.name} heeft ${fresh.service_name} voor ${fresh.customer_name} afgerond`,
       link: `/app/bookings?open=${id}`,
     });
   }
@@ -245,16 +249,16 @@ router.post('/:id/status', (req, res) => {
 router.post('/:id/payments', admin, (req, res) => {
   const id = idParam(req.params.id);
   const body = parse(z.object({
-    amount: v.money.refine((n) => n > 0, 'must be more than 0'),
+    amount: v.money.refine((n) => n > 0, 'moet meer dan 0 zijn'),
     method: z.enum(['cash', 'card', 'bank_transfer', 'other']),
     paid_at: v.date.optional(), note: v.optText(300),
   }), req.body);
   const b = loadBooking(req, id);
-  if (b.status === 'cancelled') throw badRequest('Cannot record a payment for a cancelled booking.');
+  if (b.status === 'cancelled') throw badRequest('Je kunt geen betaling registreren voor een geannuleerde boeking.');
   const company = getCompany(req.user.companyId);
   run(`INSERT INTO payments (company_id, booking_id, customer_id, amount_cents, method, paid_at, note) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     company.id, id, b.customer_id, Math.round(body.amount * 100), body.method, `${body.paid_at ?? todayIn(company.timezone)} 12:00`, body.note);
-  logActivity(company.id, req.user.id, 'paid', 'booking', id, `${req.user.name} recorded a payment for ${b.reference}`);
+  logActivity(company.id, req.user.id, 'paid', 'booking', id, `${req.user.name} heeft een betaling geregistreerd voor ${b.reference}`);
   res.status(201).json({ booking: one(`${BOOKING_SELECT} WHERE b.id = ?`, id), payments: all('SELECT * FROM payments WHERE booking_id = ?', id) });
 });
 
@@ -262,16 +266,16 @@ router.delete('/:id/payments/:pid', admin, (req, res) => {
   const id = idParam(req.params.id);
   loadBooking(req, id);
   const info = run('DELETE FROM payments WHERE id = ? AND booking_id = ? AND company_id = ?', idParam(req.params.pid), id, req.user.companyId);
-  if (!info.changes) throw notFound('Payment');
+  if (!info.changes) throw notFound('Betaling');
   res.json({ ok: true });
 });
 
 export function notifyConfirmed(company, b) {
   notifySafe(company.id, 'booking_confirmed', {
-    title: `Booking ${b.reference} confirmed`, body: `${b.customer_name} · ${b.service_name} · ${b.starts_at}`,
+    title: `Boeking ${b.reference} bevestigd`, body: `${b.customer_name} · ${b.service_name} · ${fmtShort(b.starts_at)}`,
     link: `/app/bookings?open=${b.id}`, emailTo: [b.customer_email], smsTo: [b.customer_phone],
-    emailSubject: `Your ${b.service_name} appointment is confirmed`,
-    emailBody: `Hi ${b.customer_name},\n\nYour ${b.service_name} appointment is confirmed for ${b.starts_at}.\nAddress: ${b.address}\nReference: ${b.reference}\n\nSee you then!\n${company.name}`,
+    emailSubject: `Je afspraak voor ${b.service_name} is bevestigd`,
+    emailBody: `Hallo ${b.customer_name},\n\nJe afspraak voor ${b.service_name} is bevestigd: ${fmtWhen(b.starts_at)}.\nAdres: ${b.address}\nReferentie: ${b.reference}\n\nTot dan!\n${company.name}`,
   });
 }
 
@@ -279,10 +283,10 @@ export function notifyAssignment(company, b) {
   const user = one(`SELECT id FROM users WHERE employee_id = ? AND status = 'active'`, b.employee_id);
   const emp = one('SELECT email, phone FROM employees WHERE id = ?', b.employee_id);
   notifySafe(company.id, 'employee_assigned', {
-    title: `New job: ${b.service_name}`, body: `${b.starts_at} · ${b.address}`, link: `/app/bookings?open=${b.id}`,
+    title: `Nieuwe klus: ${b.service_name}`, body: `${fmtShort(b.starts_at)} · ${b.address}`, link: `/app/bookings?open=${b.id}`,
     userId: user?.id ?? null, emailTo: [emp?.email], smsTo: [emp?.phone],
-    emailSubject: `New job assigned: ${b.service_name} on ${b.starts_at}`,
-    emailBody: `You have been assigned a new job.\n\nService: ${b.service_name}\nWhen: ${b.starts_at} – ${b.ends_at.slice(11)}\nAddress: ${b.address}\n${b.instructions ? `Instructions: ${b.instructions}\n` : ''}\n${company.name}`,
+    emailSubject: `Nieuwe klus: ${b.service_name} op ${fmtShort(b.starts_at)}`,
+    emailBody: `Er is een nieuwe klus aan je toegewezen.\n\nDienst: ${b.service_name}\nWanneer: ${fmtWhen(b.starts_at)} – ${b.ends_at.slice(11)}\nAdres: ${b.address}\n${b.instructions ? `Bijzonderheden: ${b.instructions}\n` : ''}\n${company.name}`,
   });
 }
 

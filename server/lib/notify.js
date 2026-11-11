@@ -2,16 +2,16 @@ import nodemailer from 'nodemailer';
 import { all, one, run } from '../db.js';
 import { config } from '../config.js';
 import { getSubscription } from './auth.js';
-import { nowIn, addMinutes } from './core.js';
+import { nowIn, addMinutes, fmtWhen, fmtShort } from './core.js';
 
 export const NOTIFICATION_TYPES = {
-  booking_new: { label: 'New booking requests', defaults: { in_app: 1, email: 1, sms: 0 } },
-  booking_confirmed: { label: 'Booking confirmations', defaults: { in_app: 1, email: 1, sms: 0 } },
-  booking_cancelled: { label: 'Booking cancellations', defaults: { in_app: 1, email: 1, sms: 0 } },
-  booking_reminder: { label: 'Upcoming appointment reminders', defaults: { in_app: 1, email: 1, sms: 0 } },
-  employee_assigned: { label: 'Employee job assignments', defaults: { in_app: 1, email: 1, sms: 0 } },
-  job_completed: { label: 'Completed jobs', defaults: { in_app: 1, email: 0, sms: 0 } },
-  chat_escalated: { label: 'AI assistant escalations', defaults: { in_app: 1, email: 1, sms: 0 } },
+  booking_new: { label: 'Nieuwe boekingsaanvragen', defaults: { in_app: 1, email: 1, sms: 0 } },
+  booking_confirmed: { label: 'Bevestigde boekingen', defaults: { in_app: 1, email: 1, sms: 0 } },
+  booking_cancelled: { label: 'Geannuleerde boekingen', defaults: { in_app: 1, email: 1, sms: 0 } },
+  booking_reminder: { label: 'Herinneringen voor komende afspraken', defaults: { in_app: 1, email: 1, sms: 0 } },
+  employee_assigned: { label: 'Nieuwe klus voor medewerker', defaults: { in_app: 1, email: 1, sms: 0 } },
+  job_completed: { label: 'Afgeronde klussen', defaults: { in_app: 1, email: 0, sms: 0 } },
+  chat_escalated: { label: 'Doorgestuurde chats van de AI-assistent', defaults: { in_app: 1, email: 1, sms: 0 } },
 };
 
 export function notificationSettings(companyId) {
@@ -117,12 +117,12 @@ export async function runReminderSweep() {
     for (const b of due) {
       run('INSERT OR IGNORE INTO reminder_log (booking_id) VALUES (?)', b.id);
       await notify(c.id, 'booking_reminder', {
-        title: `Reminder: ${b.service_name} on ${b.starts_at}`,
+        title: `Herinnering: ${b.service_name} op ${fmtShort(b.starts_at)}`,
         body: `${b.customer_name} · ${b.address}`,
         link: `/app/bookings?open=${b.id}`,
         emailTo: [b.customer_email], smsTo: [b.customer_phone],
-        emailSubject: `Reminder: your ${b.service_name} with ${c.name}`,
-        emailBody: `Hi ${b.customer_name},\n\nThis is a reminder of your ${b.service_name} appointment on ${b.starts_at} at ${b.address}.\nBooking reference: ${b.reference}\n\n${c.name}`,
+        emailSubject: `Herinnering: je afspraak voor ${b.service_name} bij ${c.name}`,
+        emailBody: `Hallo ${b.customer_name},\n\nEen herinnering aan je afspraak voor ${b.service_name} op ${fmtWhen(b.starts_at)}, op ${b.address}.\nReferentie: ${b.reference}\n\nTot dan!\n${c.name}`,
       });
     }
   }

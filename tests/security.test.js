@@ -111,7 +111,7 @@ test('plan gating is enforced server-side (Starter)', async () => {
   // Switching the trial plan (Stripe not configured) is allowed and clearly unpaid.
   const sw = await o.c.post('/billing/change-plan', { plan: 'professional' });
   assert.equal(sw.status, 200);
-  assert.match(sw.data.message, /No payment has been taken/);
+  assert.match(sw.data.message, /Er is niets afgeschreven/);
   assert.equal((await o.c.get('/employees')).status, 200);
 });
 

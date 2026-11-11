@@ -12,7 +12,7 @@ export default function ChatPage() {
   useEffect(() => { api.get(`/public/company/${slug}`).then(setInfo).catch(setError); }, [slug]);
   if (error) return <ErrorState error={error} />;
   if (!info) return <PageLoader />;
-  if (!info.assistant) return <ErrorState error={{ message: `${info.company.name} does not offer chat support at the moment.` }} />;
+  if (!info.assistant) return <ErrorState error={{ message: `${info.company.name} biedt op dit moment geen chat aan.` }} />;
   return (
     <div className="flex min-h-screen items-center justify-center bg-navy-50 sm:p-6">
       <ChatPanel slug={slug} assistantName={info.assistant.name} welcome={info.assistant.welcome}

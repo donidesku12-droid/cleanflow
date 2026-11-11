@@ -40,7 +40,7 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   const id = idParam(req.params.id);
   const customer = one(`SELECT c.*, ${STATS} FROM customers c WHERE c.id = ? AND c.company_id = ?`, id, req.user.companyId);
-  if (!customer) throw notFound('Customer');
+  if (!customer) throw notFound('Klant');
   const bookings = all(`${BOOKING_SELECT} WHERE b.customer_id = ? AND b.company_id = ? ORDER BY b.starts_at DESC`, id, req.user.companyId);
   const payments = all('SELECT * FROM payments WHERE customer_id = ? AND company_id = ? ORDER BY paid_at DESC', id, req.user.companyId);
   res.json({ customer, bookings, payments });
@@ -54,7 +54,7 @@ const schema = z.object({
 
 function assertUniqueEmail(companyId, email, exceptId = 0) {
   if (email && one('SELECT 1 FROM customers WHERE company_id = ? AND email = ? AND id != ?', companyId, email, exceptId)) {
-    throw badRequest('Email: a customer with this email already exists');
+    throw badRequest('E-mailadres: er bestaat al een klant met dit e-mailadres');
   }
 }
 
@@ -64,31 +64,31 @@ router.post('/', (req, res) => {
   const info = run(`INSERT INTO customers (company_id, name, email, phone, address, city, postal_code, notes, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     req.user.companyId, b.name, b.email, b.phone, b.address, b.city, b.postal_code, b.notes, b.tags);
   const id = Number(info.lastInsertRowid);
-  logActivity(req.user.companyId, req.user.id, 'created', 'customer', id, `${req.user.name} added customer ${b.name}`);
+  logActivity(req.user.companyId, req.user.id, 'created', 'customer', id, `${req.user.name} heeft klant ${b.name} toegevoegd`);
   res.status(201).json({ customer: one('SELECT * FROM customers WHERE id = ?', id) });
 });
 
 router.patch('/:id', (req, res) => {
   const id = idParam(req.params.id);
   const existing = one('SELECT * FROM customers WHERE id = ? AND company_id = ?', id, req.user.companyId);
-  if (!existing) throw notFound('Customer');
+  if (!existing) throw notFound('Klant');
   const b = parse(schema.partial(), req.body);
   const merged = { ...existing, ...Object.fromEntries(Object.entries(b).filter(([, val]) => val !== undefined)) };
   assertUniqueEmail(req.user.companyId, merged.email, id);
   run(`UPDATE customers SET name = ?, email = ?, phone = ?, address = ?, city = ?, postal_code = ?, notes = ?, tags = ? WHERE id = ?`,
     merged.name, merged.email, merged.phone, merged.address, merged.city, merged.postal_code, merged.notes, merged.tags, id);
-  logActivity(req.user.companyId, req.user.id, 'updated', 'customer', id, `${req.user.name} updated customer ${merged.name}`);
+  logActivity(req.user.companyId, req.user.id, 'updated', 'customer', id, `${req.user.name} heeft klant ${merged.name} gewijzigd`);
   res.json({ customer: one('SELECT * FROM customers WHERE id = ?', id) });
 });
 
 router.delete('/:id', (req, res) => {
   const id = idParam(req.params.id);
   const c = one('SELECT * FROM customers WHERE id = ? AND company_id = ?', id, req.user.companyId);
-  if (!c) throw notFound('Customer');
+  if (!c) throw notFound('Klant');
   const n = one(`SELECT COUNT(*) n FROM bookings WHERE customer_id = ?`, id).n;
-  if (n > 0) throw badRequest('This customer has booking history and cannot be deleted. Remove their bookings first or keep the record.');
+  if (n > 0) throw badRequest('Deze klant heeft boekingen en kan daarom niet worden verwijderd.');
   run('DELETE FROM customers WHERE id = ?', id);
-  logActivity(req.user.companyId, req.user.id, 'deleted', 'customer', id, `${req.user.name} deleted customer ${c.name}`);
+  logActivity(req.user.companyId, req.user.id, 'deleted', 'customer', id, `${req.user.name} heeft klant ${c.name} verwijderd`);
   res.json({ ok: true });
 });
 

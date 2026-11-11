@@ -72,19 +72,19 @@ export function getSubscription(companyId) {
 }
 
 export function requireAuth(req, _res, next) {
-  if (!req.user) return next(new HttpError(401, 'Please log in to continue'));
+  if (!req.user) return next(new HttpError(401, 'Log in om verder te gaan'));
   next();
 }
 
 export const requireRole = (...roles) => (req, _res, next) => {
-  if (!req.user) return next(new HttpError(401, 'Please log in to continue'));
+  if (!req.user) return next(new HttpError(401, 'Log in om verder te gaan'));
   if (!roles.includes(req.user.role)) return next(forbidden());
   next();
 };
 
 export const requireFeature = (feature) => (req, _res, next) => {
   if (!req.subscription?.features.includes(feature)) {
-    return next(new HttpError(402, 'This feature is not included in your current plan. Upgrade in Settings → Billing.', { feature }));
+    return next(new HttpError(402, 'Deze functie zit niet in je huidige abonnement. Upgrade via Instellingen → Abonnement.', { feature }));
   }
   next();
 };
@@ -97,11 +97,11 @@ export const isStaffAdmin = (user) => user.role === 'owner' || user.role === 'ma
 export function csrfGuard(req, _res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   if (req.path.startsWith('/billing/webhook')) return next();
-  if (req.get('x-cleanflow-client') !== '1') return next(new HttpError(403, 'Missing client header'));
+  if (req.get('x-cleanflow-client') !== '1') return next(new HttpError(403, 'Verzoek geweigerd'));
   const origin = req.get('origin');
   if (origin && config.appUrl && config.isProd) {
     const allowed = new URL(config.appUrl).origin;
-    if (origin !== allowed) return next(new HttpError(403, 'Cross-origin request blocked'));
+    if (origin !== allowed) return next(new HttpError(403, 'Verzoek van een andere website geblokkeerd'));
   }
   next();
 }

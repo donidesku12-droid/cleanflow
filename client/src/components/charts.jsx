@@ -27,7 +27,7 @@ export function RevenueBars({ data, currency, height = 260, dataKey = 'revenue',
         <XAxis dataKey={xKey} {...axis} interval="preserveStartEnd" minTickGap={8} />
         <YAxis {...axis} width={56} tickFormatter={(v) => (currency ? moneyUnits(v, currency) : v)} allowDecimals={false} />
         <Tooltip content={<ChartTooltip currency={currency} />} cursor={{ fill: 'rgba(16,185,129,0.08)' }} />
-        <Bar dataKey={dataKey} name="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={44} />
+        <Bar dataKey={dataKey} name="Omzet" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={44} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -78,7 +78,7 @@ export function StatusBreakdown({ rows }) {
   const order = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'];
   const counts = Object.fromEntries(rows.map((r) => [r.status, r.n]));
   const total = rows.reduce((s, r) => s + r.n, 0);
-  if (!total) return <p className="py-6 text-center text-sm text-navy-400">No bookings in this period yet.</p>;
+  if (!total) return <p className="py-6 text-center text-sm text-navy-400">Nog geen boekingen in deze periode.</p>;
   return (
     <div>
       <div className="flex h-3 gap-0.5 overflow-hidden rounded-full">

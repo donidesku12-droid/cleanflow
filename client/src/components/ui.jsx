@@ -167,9 +167,9 @@ export function ErrorState({ error, onRetry }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
       <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-red-50 text-red-600"><AlertTriangle className="size-6" /></div>
-      <h3 className="font-semibold text-navy-900">Couldn't load this</h3>
-      <p className="mt-1 max-w-sm text-sm text-navy-400">{error?.message || 'Something went wrong.'}</p>
-      {onRetry && <Button variant="secondary" className="mt-5" icon={RefreshCw} onClick={() => onRetry()}>Try again</Button>}
+      <h3 className="font-semibold text-navy-900">Laden mislukt</h3>
+      <p className="mt-1 max-w-sm text-sm text-navy-400">{error?.message || 'Er ging iets mis.'}</p>
+      {onRetry && <Button variant="secondary" className="mt-5" icon={RefreshCw} onClick={() => onRetry()}>Opnieuw proberen</Button>}
     </div>
   );
 }
@@ -239,7 +239,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
             <h2 className="text-lg font-semibold text-navy-900">{title}</h2>
             {description && <p className="mt-0.5 text-sm text-navy-400">{description}</p>}
           </div>
-          <IconButton icon={X} label="Close" onClick={onClose} className="-mr-2 -mt-1" />
+          <IconButton icon={X} label="Sluiten" onClick={onClose} className="-mr-2 -mt-1" />
         </div>
         <div className="overflow-y-auto px-5 py-5">{children}</div>
         {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-navy-100 bg-navy-50/50 px-5 py-3.5 rounded-b-2xl">{footer}</div>}
@@ -258,7 +258,7 @@ export function Drawer({ open, onClose, title, children, footer, width = 'max-w-
       <div className={cx('relative flex h-full w-full animate-slide-in-right flex-col bg-white shadow-soft', width)}>
         <div className="flex items-center justify-between gap-4 border-b border-navy-100 px-5 py-4">
           <h2 className="truncate text-lg font-semibold text-navy-900">{title}</h2>
-          <IconButton icon={X} label="Close" onClick={onClose} />
+          <IconButton icon={X} label="Sluiten" onClick={onClose} />
         </div>
         <div className="flex-1 overflow-y-auto">{children}</div>
         {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-navy-100 bg-navy-50/50 px-5 py-3.5">{footer}</div>}
@@ -268,10 +268,10 @@ export function Drawer({ open, onClose, title, children, footer, width = 'max-w-
   );
 }
 
-export function ConfirmDialog({ open, onClose, onConfirm, title, message, confirmLabel = 'Confirm', danger, loading, children }) {
+export function ConfirmDialog({ open, onClose, onConfirm, title, message, confirmLabel = 'Bevestigen', danger, loading, children }) {
   return (
     <Modal open={open} onClose={onClose} title={title} size="max-w-md"
-      footer={<><Button variant="secondary" onClick={onClose}>Back</Button><Button variant={danger ? 'danger' : 'primary'} loading={loading} onClick={onConfirm}>{confirmLabel}</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>Terug</Button><Button variant={danger ? 'danger' : 'primary'} loading={loading} onClick={onConfirm}>{confirmLabel}</Button></>}>
       {message && <p className="text-sm text-navy-500">{message}</p>}
       {children}
     </Modal>
@@ -283,9 +283,9 @@ export function UpgradeNotice({ feature, plan = 'Professional' }) {
     <Card className="overflow-hidden">
       <div className="flex flex-col items-center px-6 py-14 text-center">
         <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-glow"><Sparkles className="size-6" /></div>
-        <h3 className="text-lg font-semibold text-navy-900">{feature} is part of the {plan} plan</h3>
-        <p className="mt-1 max-w-md text-sm text-navy-400">Upgrade your subscription to unlock this module. Your data stays exactly where it is.</p>
-        <Button to="/app/settings?tab=billing" className="mt-6">View plans</Button>
+        <h3 className="text-lg font-semibold text-navy-900">{feature} zit in het {plan}-abonnement</h3>
+        <p className="mt-1 max-w-md text-sm text-navy-400">Upgrade je abonnement om deze module te gebruiken. Je gegevens blijven gewoon bewaard.</p>
+        <Button to="/app/settings?tab=billing" className="mt-6">Abonnementen bekijken</Button>
       </div>
     </Card>
   );

@@ -12,7 +12,7 @@ import {
 import { RevenueBars, StatusBreakdown } from '../../components/charts.jsx';
 
 const EMP_STATE = {
-  available: ['Available', 'emerald'], on_job: ['On a job', 'violet'], off: ['Day off', 'navy'], off_shift: ['Off shift', 'navy'], on_leave: ['On leave', 'amber'],
+  available: ['Beschikbaar', 'emerald'], on_job: ['Aan het werk', 'violet'], off: ['Vrije dag', 'navy'], off_shift: ['Buiten dienst', 'navy'], on_leave: ['Met verlof', 'amber'],
 };
 
 function DashboardSkeleton() {
@@ -40,7 +40,7 @@ export function AppointmentRow({ b, showEmployee = true }) {
         </p>
       </div>
       {showEmployee && (b.employee_name ? <Avatar name={b.employee_name} color={b.employee_color} size="size-7" className="hidden sm:inline-flex" />
-        : <Badge color="amber" className="hidden sm:inline-flex">Unassigned</Badge>)}
+        : <Badge color="amber" className="hidden sm:inline-flex">Niet toegewezen</Badge>)}
       <StatusBadge status={b.status} />
     </Link>
   );
@@ -53,33 +53,33 @@ function EmployeeDashboard({ data }) {
   const { reload } = data;
   const setStatus = async (b, status) => {
     setBusy(b.id);
-    try { await api.post(`/bookings/${b.id}/status`, { status }); toast.success(status === 'completed' ? 'Job marked as completed' : 'Job started'); reload(true); }
+    try { await api.post(`/bookings/${b.id}/status`, { status }); toast.success(status === 'completed' ? 'Klus afgerond' : 'Klus gestart'); reload(true); }
     catch (err) { toast.error(err.message); } finally { setBusy(null); }
   };
   const d = data.data;
   return (
     <div>
-      <PageHeader title={`Hi ${user.name.split(' ')[0]} 👋`} description={`Here are your jobs for ${fmtDate(d.today, { weekday: 'long', day: 'numeric', month: 'long' })}.`} />
+      <PageHeader title={`Hoi ${user.name.split(' ')[0]} 👋`} description={`Dit zijn je klussen voor ${fmtDate(d.today, { weekday: 'long', day: 'numeric', month: 'long' })}.`} />
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Jobs today" value={d.todayJobs.filter((j) => j.status !== 'cancelled').length} icon={CalendarCheck} />
-        <StatCard label="Completed this month" value={d.completedMonth} icon={CheckCircle2} tone="sky" />
-        <StatCard label="Completed all time" value={d.completedTotal} icon={Sparkles} tone="violet" />
+        <StatCard label="Klussen vandaag" value={d.todayJobs.filter((j) => j.status !== 'cancelled').length} icon={CalendarCheck} />
+        <StatCard label="Afgerond deze maand" value={d.completedMonth} icon={CheckCircle2} tone="sky" />
+        <StatCard label="Totaal afgerond" value={d.completedTotal} icon={Sparkles} tone="violet" />
       </div>
       <Card className="mb-6">
-        <CardHeader title="Today" description="Start and complete your jobs as you go." />
-        {d.todayJobs.length === 0 ? <EmptyState icon={CalendarCheck} title="No jobs today" description="Enjoy your day! New assignments will appear here." /> : (
+        <CardHeader title="Vandaag" description="Start en rond je klussen af terwijl je bezig bent." />
+        {d.todayJobs.length === 0 ? <EmptyState icon={CalendarCheck} title="Geen klussen vandaag" description="Geniet van je dag! Nieuwe klussen verschijnen hier." /> : (
           <ul className="divide-y divide-navy-100">
             {d.todayJobs.map((b) => (
               <li key={b.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{fmtTime(b.starts_at)}–{fmtTime(b.ends_at)} · {b.service_name}</p>
                   <p className="text-sm text-navy-500">{b.customer_name} · {b.address}</p>
-                  {b.instructions && <p className="mt-1 text-sm text-amber-700">Note: {b.instructions}</p>}
+                  {b.instructions && <p className="mt-1 text-sm text-amber-700">Let op: {b.instructions}</p>}
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge status={b.status} />
-                  {b.status === 'confirmed' && <Button size="sm" icon={Play} loading={busy === b.id} onClick={() => setStatus(b, 'in_progress')}>Start</Button>}
-                  {b.status === 'in_progress' && <Button size="sm" icon={CheckCircle2} loading={busy === b.id} onClick={() => setStatus(b, 'completed')}>Complete</Button>}
+                  {b.status === 'confirmed' && <Button size="sm" icon={Play} loading={busy === b.id} onClick={() => setStatus(b, 'in_progress')}>Starten</Button>}
+                  {b.status === 'in_progress' && <Button size="sm" icon={CheckCircle2} loading={busy === b.id} onClick={() => setStatus(b, 'completed')}>Afronden</Button>}
                   <Button size="sm" variant="secondary" to={`/app/bookings?open=${b.id}`}>Details</Button>
                 </div>
               </li>
@@ -88,8 +88,8 @@ function EmployeeDashboard({ data }) {
         )}
       </Card>
       <Card>
-        <CardHeader title="Upcoming jobs" action={<Button size="sm" variant="ghost" to="/app/bookings">All my jobs <ArrowRight className="size-4" /></Button>} />
-        {d.upcoming.length === 0 ? <EmptyState title="Nothing scheduled yet" description="Jobs assigned to you will show up here." /> : <div className="divide-y divide-navy-100">{d.upcoming.map((b) => <AppointmentRow key={b.id} b={b} showEmployee={false} />)}</div>}
+        <CardHeader title="Komende klussen" action={<Button size="sm" variant="ghost" to="/app/bookings">Al mijn klussen <ArrowRight className="size-4" /></Button>} />
+        {d.upcoming.length === 0 ? <EmptyState title="Nog niets ingepland" description="Klussen die aan jou worden toegewezen, verschijnen hier." /> : <div className="divide-y divide-navy-100">{d.upcoming.map((b) => <AppointmentRow key={b.id} b={b} showEmployee={false} />)}</div>}
       </Card>
     </div>
   );
@@ -103,12 +103,12 @@ function Welcome({ company }) {
       <div className="flex flex-col gap-6 bg-gradient-to-br from-emerald-50 to-white p-6 md:flex-row md:items-center">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white"><PartyPopper className="size-6" /></span>
         <div className="flex-1">
-          <h2 className="text-lg font-bold">Welcome to CLEANFLOW!</h2>
-          <p className="mt-1 text-sm text-navy-500">Your workspace is ready. We added six example services you can edit. Next steps:</p>
+          <h2 className="text-lg font-bold">Welkom bij CLEANFLOW!</h2>
+          <p className="mt-1 text-sm text-navy-500">Je account is klaar. We hebben zes voorbeelddiensten toegevoegd die je kunt aanpassen. Volgende stappen:</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" icon={Sparkles} to="/app/services">Review services & prices</Button>
-            <Button size="sm" variant="secondary" icon={Settings2} to="/app/settings?tab=hours">Set opening hours</Button>
-            <Button size="sm" variant="secondary" icon={Copy} onClick={() => navigator.clipboard?.writeText(link).then(() => toast.success('Booking link copied'), () => toast.error('Could not copy the link'))}>Copy booking link</Button>
+            <Button size="sm" variant="secondary" icon={Sparkles} to="/app/services">Diensten & prijzen bekijken</Button>
+            <Button size="sm" variant="secondary" icon={Settings2} to="/app/settings?tab=hours">Openingstijden instellen</Button>
+            <Button size="sm" variant="secondary" icon={Copy} onClick={() => navigator.clipboard?.writeText(link).then(() => toast.success('Boekingslink gekopieerd'), () => toast.error('Kopiëren is mislukt'))}>Boekingslink kopiëren</Button>
           </div>
         </div>
       </div>
@@ -129,50 +129,50 @@ export default function Dashboard() {
   const cur = d.currency;
   const s = d.stats;
   const trend = s.revenuePrevMonth ? Math.round(((s.revenueMonth - s.revenuePrevMonth) / s.revenuePrevMonth) * 100) : null;
-  const monthName = new Date(`${d.today}T12:00:00Z`).toLocaleDateString('en-GB', { month: 'long', timeZone: 'UTC' });
+  const monthName = new Date(`${d.today}T12:00:00Z`).toLocaleDateString('nl-NL', { month: 'long', timeZone: 'UTC' });
 
   return (
     <div>
-      <PageHeader title={`Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, ${user.name.split(' ')[0]}`}
-        description={`Here's what's happening at ${company.name} today.`}
-        actions={<><Button variant="secondary" to="/app/bookings?status=pending" icon={Hourglass}>Review requests</Button><Button to="/app/bookings?new=1" icon={CalendarCheck}>New booking</Button></>} />
+      <PageHeader title={`Goede${new Date().getHours() < 12 ? 'morgen' : new Date().getHours() < 18 ? 'middag' : 'navond'}, ${user.name.split(' ')[0]}`}
+        description={`Dit gebeurt er vandaag bij ${company.name}.`}
+        actions={<><Button variant="secondary" to="/app/bookings?status=pending" icon={Hourglass}>Aanvragen bekijken</Button><Button to="/app/bookings?new=1" icon={CalendarCheck}>Nieuwe boeking</Button></>} />
       {(params.get('welcome') || s.bookingsTotal === 0) && <Welcome company={company} />}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard label={`Revenue in ${monthName}`} value={money(s.revenueMonth, cur, { compact: true })} icon={Euro} trend={trend} sub={trend !== null ? 'vs same period last month' : 'Recorded payments'} />
-        <StatCard label="Bookings this month" value={s.bookingsMonth} icon={CalendarCheck} tone="sky" sub={`${s.bookingsTotal} all time`} />
-        <StatCard label="Pending requests" value={s.pending} icon={Hourglass} tone="amber" sub={s.pending ? 'Awaiting your response' : 'All caught up'} />
-        <StatCard label="Completed jobs" value={s.completedMonth} icon={CheckCircle2} tone="violet" sub={`this month · ${s.completedTotal} all time`} />
-        <StatCard label="Active customers" value={s.activeCustomers} icon={Users} tone="pink" sub={`last 90 days · ${s.totalCustomers} total`} />
-        <StatCard label="Employees" value={s.employees} icon={UserCog} tone="navy" sub={`active · ${s.employeesTotal} total`} />
+        <StatCard label={`Omzet in ${monthName}`} value={money(s.revenueMonth, cur, { compact: true })} icon={Euro} trend={trend} sub={trend !== null ? 't.o.v. zelfde periode vorige maand' : 'Geregistreerde betalingen'} />
+        <StatCard label="Boekingen deze maand" value={s.bookingsMonth} icon={CalendarCheck} tone="sky" sub={`${s.bookingsTotal} in totaal`} />
+        <StatCard label="Openstaande aanvragen" value={s.pending} icon={Hourglass} tone="amber" sub={s.pending ? 'Wachten op jouw reactie' : 'Alles bijgewerkt'} />
+        <StatCard label="Afgeronde klussen" value={s.completedMonth} icon={CheckCircle2} tone="violet" sub={`deze maand · ${s.completedTotal} in totaal`} />
+        <StatCard label="Actieve klanten" value={s.activeCustomers} icon={Users} tone="pink" sub={`laatste 90 dagen · ${s.totalCustomers} in totaal`} />
+        <StatCard label="Medewerkers" value={s.employees} icon={UserCog} tone="navy" sub={`actief · ${s.employeesTotal} in totaal`} />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader title="Revenue" description={range === 'weekly' ? 'Recorded payments per week, last 8 weeks' : 'Recorded payments per month, last 12 months'}
-            action={<Segmented value={range} onChange={setRange} options={[{ value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' }]} />} />
+          <CardHeader title="Omzet" description={range === 'weekly' ? 'Geregistreerde betalingen per week, laatste 8 weken' : 'Geregistreerde betalingen per maand, laatste 12 maanden'}
+            action={<Segmented value={range} onChange={setRange} options={[{ value: 'weekly', label: 'Per week' }, { value: 'monthly', label: 'Per maand' }]} />} />
           <div className="p-4 pt-5">
             {d.revenue[range].every((r) => r.revenue === 0)
-              ? <EmptyState icon={Euro} title="No revenue recorded yet" description="Record payments on completed bookings to see revenue here." />
+              ? <EmptyState icon={Euro} title="Nog geen omzet geregistreerd" description="Registreer betalingen bij afgeronde boekingen om hier je omzet te zien." />
               : <RevenueBars data={d.revenue[range]} currency={cur} />}
           </div>
         </Card>
         <Card>
-          <CardHeader title="Booking status" description={`All bookings in ${monthName}`} />
+          <CardHeader title="Status van boekingen" description={`Alle boekingen in ${monthName}`} />
           <div className="p-5"><StatusBreakdown rows={d.statusOverview} /></div>
         </Card>
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader title="Upcoming appointments" action={<Button size="sm" variant="ghost" to="/app/bookings">View all <ArrowRight className="size-4" /></Button>} />
-          {d.upcoming.length === 0 ? <EmptyState icon={CalendarCheck} title="No upcoming appointments" description="New bookings from your booking page or added manually will appear here." action={<Button to="/app/bookings?new=1" size="sm">Add a booking</Button>} />
+          <CardHeader title="Komende afspraken" action={<Button size="sm" variant="ghost" to="/app/bookings">Alles bekijken <ArrowRight className="size-4" /></Button>} />
+          {d.upcoming.length === 0 ? <EmptyState icon={CalendarCheck} title="Geen komende afspraken" description="Nieuwe boekingen via je boekingspagina of die je zelf toevoegt, verschijnen hier." action={<Button to="/app/bookings?new=1" size="sm">Boeking toevoegen</Button>} />
             : <div className="divide-y divide-navy-100">{d.upcoming.map((b) => <AppointmentRow key={b.id} b={b} />)}</div>}
         </Card>
         <Card>
-          <CardHeader title="Team today" description="Live availability" action={d.showEmployees && <Button size="sm" variant="ghost" to="/app/employees">Manage</Button>} />
-          {!d.showEmployees ? <EmptyState icon={UserCog} title="Employee management" description="Available on the Professional plan." action={<Button size="sm" variant="secondary" to="/app/settings?tab=billing">View plans</Button>} />
-            : d.employees.length === 0 ? <EmptyState icon={UserCog} title="No team members yet" action={<Button size="sm" to="/app/employees?new=1">Add employee</Button>} />
+          <CardHeader title="Team vandaag" description="Actuele beschikbaarheid" action={d.showEmployees && <Button size="sm" variant="ghost" to="/app/employees">Beheren</Button>} />
+          {!d.showEmployees ? <EmptyState icon={UserCog} title="Personeelsbeheer" description="Beschikbaar in het Professional-abonnement." action={<Button size="sm" variant="secondary" to="/app/settings?tab=billing">Abonnementen bekijken</Button>} />
+            : d.employees.length === 0 ? <EmptyState icon={UserCog} title="Nog geen teamleden" action={<Button size="sm" to="/app/employees?new=1">Medewerker toevoegen</Button>} />
               : (
                 <ul className="divide-y divide-navy-100">
                   {d.employees.map((e) => (
@@ -181,7 +181,7 @@ export default function Dashboard() {
                         <Avatar name={e.name} color={e.color} size="size-8" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold">{e.name}</p>
-                          <p className="truncate text-xs text-navy-400">{e.current ? `${e.current.service_name} until ${fmtTime(e.current.ends_at)}` : e.shift ? `Shift ${e.shift} · ${e.jobsToday} job${e.jobsToday === 1 ? '' : 's'}` : e.job_title}</p>
+                          <p className="truncate text-xs text-navy-400">{e.current ? `${e.current.service_name} tot ${fmtTime(e.current.ends_at)}` : e.shift ? `Dienst ${e.shift} · ${e.jobsToday} klus${e.jobsToday === 1 ? '' : 'sen'}` : e.job_title}</p>
                         </div>
                         <Badge color={EMP_STATE[e.state][1]}>{EMP_STATE[e.state][0]}</Badge>
                       </Link>
@@ -194,8 +194,8 @@ export default function Dashboard() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Recent activity" />
-          {d.activity.length === 0 ? <EmptyState icon={Activity} title="No activity yet" /> : (
+          <CardHeader title="Recente activiteit" />
+          {d.activity.length === 0 ? <EmptyState icon={Activity} title="Nog geen activiteit" /> : (
             <ul className="space-y-0.5 p-3">
               {d.activity.map((a) => (
                 <li key={a.id} className="flex gap-3 rounded-xl px-2 py-2">
@@ -210,8 +210,8 @@ export default function Dashboard() {
           )}
         </Card>
         <Card>
-          <CardHeader title="Notifications" action={<Button size="sm" variant="ghost" to="/app/notifications">View all</Button>} />
-          {d.notifications.length === 0 ? <EmptyState icon={Bell} title="No notifications" /> : (
+          <CardHeader title="Meldingen" action={<Button size="sm" variant="ghost" to="/app/notifications">Alles bekijken</Button>} />
+          {d.notifications.length === 0 ? <EmptyState icon={Bell} title="Geen meldingen" /> : (
             <ul className="divide-y divide-navy-100">
               {d.notifications.map((n) => (
                 <li key={n.id}>

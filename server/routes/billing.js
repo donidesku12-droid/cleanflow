@@ -16,7 +16,7 @@ async function stripe(path, params = {}, method = 'POST') {
     body: method === 'GET' ? undefined : new URLSearchParams(params),
   });
   const body = await res.json();
-  if (!res.ok) throw new HttpError(502, `Payment provider error: ${body.error?.message || res.status}`);
+  if (!res.ok) throw new HttpError(502, `Fout bij de betaalprovider: ${body.error?.message || res.status}`);
   return body;
 }
 
@@ -58,21 +58,21 @@ router.post('/change-plan', requireRole('owner'), async (req, res) => {
       'subscription_data[metadata][plan]': plan,
       success_url: `${config.appUrl}/app/settings?tab=billing&checkout=success`,
       cancel_url: `${config.appUrl}/app/settings?tab=billing&checkout=cancelled`,
-      ...(company?.name ? { 'custom_text[submit][message]': `Subscription for ${company.name}` } : {}),
+      ...(company?.name ? { 'custom_text[submit][message]': `Abonnement voor ${company.name}` } : {}),
     });
     return res.json({ redirectUrl: session.url });
   }
   if (sub.status !== 'trialing' || sub.trialExpired) {
-    throw new HttpError(503, 'Online payments are not configured yet, so paid plans cannot be activated. Please contact CLEANFLOW support.');
+    throw new HttpError(503, 'Online betalen is nog niet ingesteld, dus een betaald abonnement kan nog niet worden geactiveerd. Neem contact op met CLEANFLOW.');
   }
   run(`UPDATE subscriptions SET plan = ?, updated_at = datetime('now') WHERE company_id = ?`, plan, req.user.companyId);
-  logActivity(req.user.companyId, req.user.id, 'changed', 'subscription', null, `${req.user.name} switched the trial to the ${PLANS[plan].name} plan`);
-  res.json({ subscription: getSubscription(req.user.companyId), message: `Your trial now uses the ${PLANS[plan].name} plan. No payment has been taken.` });
+  logActivity(req.user.companyId, req.user.id, 'changed', 'subscription', null, `${req.user.name} heeft de proefperiode omgezet naar ${PLANS[plan].name}`);
+  res.json({ subscription: getSubscription(req.user.companyId), message: `Je proefperiode gebruikt nu het ${PLANS[plan].name}-abonnement. Er is niets afgeschreven.` });
 });
 
 router.post('/portal', requireRole('owner'), async (req, res) => {
   const sub = getSubscription(req.user.companyId);
-  if (!config.stripe.configured || !sub.stripe_customer_id) throw new HttpError(409, 'There is no billing account to manage yet.');
+  if (!config.stripe.configured || !sub.stripe_customer_id) throw new HttpError(409, 'Er is nog geen betaalaccount om te beheren.');
   const portal = await stripe('billing_portal/sessions', { customer: sub.stripe_customer_id, return_url: `${config.appUrl}/app/settings?tab=billing` });
   res.json({ redirectUrl: portal.url });
 });

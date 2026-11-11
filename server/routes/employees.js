@@ -34,12 +34,12 @@ router.get('/', admin, requireFeature('employees'), (req, res) => {
 router.get('/:id', (req, res) => {
   const id = idParam(req.params.id);
   if (!isStaffAdmin(req.user) && req.user.employeeId !== id) throw forbidden();
-  if (isStaffAdmin(req.user) && !req.subscription.features.includes('employees')) throw forbidden('Employee management is not included in your plan.');
+  if (isStaffAdmin(req.user) && !req.subscription.features.includes('employees')) throw forbidden('Personeelsbeheer zit niet in je abonnement.');
   const company = getCompany(req.user.companyId);
   const now = nowIn(company.timezone);
   const e = hydrate(one(`SELECT e.*, ${STATS} FROM employees e LEFT JOIN users u ON u.employee_id = e.id WHERE e.id = ? AND e.company_id = ?`,
     now, now, now, now.slice(0, 10), id, company.id));
-  if (!e) throw notFound('Employee');
+  if (!e) throw notFound('Medewerker');
   const upcoming = all(`${BOOKING_SELECT} WHERE b.employee_id = ? AND b.status IN ('pending','confirmed','in_progress') AND b.ends_at >= ? ORDER BY b.starts_at LIMIT 50`, id, now);
   const completed = all(`${BOOKING_SELECT} WHERE b.employee_id = ? AND b.status = 'completed' ORDER BY b.starts_at DESC LIMIT 50`, id);
   const today = todayIn(company.timezone);
@@ -58,8 +58,8 @@ router.get('/:id', (req, res) => {
 
 const schema = z.object({
   name: v.name, email: v.optEmail, phone: v.optPhone,
-  job_title: v.text(80).min(1, 'is required'),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'must be a hex colour').default('#10b981'),
+  job_title: v.text(80).min(1, 'is verplicht'),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'moet een kleurcode zijn').default('#10b981'),
   status: z.enum(['active', 'on_leave', 'inactive']).default('active'),
   work_schedule: scheduleSchema.default(DEFAULT_WORK_SCHEDULE),
   notes: v.optText(2000),
@@ -70,14 +70,14 @@ router.post('/', admin, requireFeature('employees'), (req, res) => {
   const info = run(`INSERT INTO employees (company_id, name, email, phone, job_title, color, status, work_schedule, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     req.user.companyId, b.name, b.email, b.phone, b.job_title, b.color, b.status, JSON.stringify(b.work_schedule), b.notes);
   const id = Number(info.lastInsertRowid);
-  logActivity(req.user.companyId, req.user.id, 'created', 'employee', id, `${req.user.name} added team member ${b.name}`);
+  logActivity(req.user.companyId, req.user.id, 'created', 'employee', id, `${req.user.name} heeft ${b.name} aan het team toegevoegd`);
   res.status(201).json({ employee: hydrate(one('SELECT * FROM employees WHERE id = ?', id)) });
 });
 
 router.patch('/:id', admin, requireFeature('employees'), (req, res) => {
   const id = idParam(req.params.id);
   const existing = one('SELECT * FROM employees WHERE id = ? AND company_id = ?', id, req.user.companyId);
-  if (!existing) throw notFound('Employee');
+  if (!existing) throw notFound('Medewerker');
   const b = parse(schema.partial(), req.body);
   const m = { ...hydrate(existing), ...Object.fromEntries(Object.entries(b).filter(([, x]) => x !== undefined)) };
   const company = getCompany(req.user.companyId);
@@ -88,26 +88,26 @@ router.patch('/:id', admin, requireFeature('employees'), (req, res) => {
       // Unassign future, not-yet-started jobs so they show up for reassignment.
       const n = run(`UPDATE bookings SET employee_id = NULL, updated_at = datetime('now') WHERE employee_id = ? AND status IN ('pending','confirmed') AND starts_at > ?`,
         id, nowIn(company.timezone)).changes;
-      if (n) logActivity(company.id, req.user.id, 'unassigned', 'employee', id, `${n} upcoming job(s) of ${m.name} need reassignment`);
+      if (n) logActivity(company.id, req.user.id, 'unassigned', 'employee', id, `${n} komende klus(sen) van ${m.name} moeten opnieuw worden toegewezen`);
     }
   });
   if (b.name) run('UPDATE users SET name = ? WHERE employee_id = ?', b.name, id);
-  logActivity(company.id, req.user.id, 'updated', 'employee', id, `${req.user.name} updated team member ${m.name}`);
+  logActivity(company.id, req.user.id, 'updated', 'employee', id, `${req.user.name} heeft de gegevens van ${m.name} gewijzigd`);
   res.json({ employee: hydrate(one('SELECT * FROM employees WHERE id = ?', id)) });
 });
 
 router.delete('/:id', admin, requireFeature('employees'), (req, res) => {
   const id = idParam(req.params.id);
   const e = one('SELECT * FROM employees WHERE id = ? AND company_id = ?', id, req.user.companyId);
-  if (!e) throw notFound('Employee');
+  if (!e) throw notFound('Medewerker');
   if (one('SELECT 1 FROM bookings WHERE employee_id = ?', id)) {
-    throw badRequest('This team member has job history. Set their status to "Inactive" instead so reports stay accurate.');
+    throw badRequest('Dit teamlid heeft eerdere klussen. Zet de status op "Inactief", dan blijven je overzichten kloppen.');
   }
   tx(() => {
     run('DELETE FROM users WHERE employee_id = ? AND role != \'owner\'', id);
     run('DELETE FROM employees WHERE id = ?', id);
   });
-  logActivity(req.user.companyId, req.user.id, 'deleted', 'employee', id, `${req.user.name} removed team member ${e.name}`);
+  logActivity(req.user.companyId, req.user.id, 'deleted', 'employee', id, `${req.user.name} heeft ${e.name} uit het team verwijderd`);
   res.json({ ok: true });
 });
 

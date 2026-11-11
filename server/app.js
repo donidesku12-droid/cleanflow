@@ -69,7 +69,7 @@ export function createApp() {
   app.use('/api/assistant', assistantRoutes);
   app.use('/api/billing', billingRoutes);
 
-  app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Not found')));
+  app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Niet gevonden')));
 
   // Serve the built SPA in production.
   const dist = path.resolve(process.cwd(), 'dist');
@@ -80,11 +80,11 @@ export function createApp() {
 
   // Central error handler: never leak stack traces or SQL to clients.
   app.use((err, req, res, _next) => {
-    if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Malformed JSON body' });
-    if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Request is too large' });
+    if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Ongeldig verzoek' });
+    if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Het verzoek is te groot' });
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, ...(err.details ? { details: err.details } : {}) });
     console.error(`[error] ${req.method} ${req.originalUrl}`, err);
-    res.status(500).json({ error: 'Something went wrong on our side. Please try again.' });
+    res.status(500).json({ error: 'Er ging bij ons iets mis. Probeer het opnieuw.' });
   });
   return app;
 }

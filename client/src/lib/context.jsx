@@ -61,7 +61,7 @@ export function ToastProvider({ children }) {
             <div key={t.id} role={t.type === 'error' ? 'alert' : 'status'} className="pointer-events-auto flex w-full max-w-sm animate-slide-up items-start gap-3 rounded-xl border border-navy-100 bg-white p-3.5 shadow-soft">
               <Icon className={`mt-0.5 size-5 shrink-0 ${colors[t.type]}`} />
               <p className="flex-1 text-sm text-navy-700">{t.message}</p>
-              <button onClick={() => dismiss(t.id)} className="text-navy-300 hover:text-navy-600" aria-label="Dismiss"><X className="size-4" /></button>
+              <button onClick={() => dismiss(t.id)} className="text-navy-300 hover:text-navy-600" aria-label="Sluiten"><X className="size-4" /></button>
             </div>
           );
         })}

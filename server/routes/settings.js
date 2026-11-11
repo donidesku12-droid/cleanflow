@@ -24,9 +24,9 @@ router.patch('/company', admin, (req, res) => {
     name: v.name.optional(), email: v.optEmail, phone: v.optPhone, website: v.optText(200),
     address: v.optText(200), city: v.optText(80), postal_code: v.optText(20), country: v.optText(80),
     currency: z.enum(['EUR', 'GBP', 'USD', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN']).optional(),
-    timezone: z.string().refine((t) => TIMEZONES.includes(t), 'is not a valid timezone').optional(),
+    timezone: z.string().refine((t) => TIMEZONES.includes(t), 'is geen geldige tijdzone').optional(),
     opening_hours: hoursSchema.optional(),
-    slot_interval_min: z.coerce.number().int().refine((n) => [15, 30, 60].includes(n), 'must be 15, 30 or 60').optional(),
+    slot_interval_min: z.coerce.number().int().refine((n) => [15, 30, 60].includes(n), 'moet 15, 30 of 60 zijn').optional(),
     min_notice_hours: z.coerce.number().int().min(0).max(168).optional(),
     booking_horizon_days: z.coerce.number().int().min(7).max(365).optional(),
     booking_enabled: z.boolean().optional(),
@@ -38,16 +38,16 @@ router.patch('/company', admin, (req, res) => {
   pick('name'), pick('email'), pick('phone'), pick('website'), pick('address'), pick('city'), pick('postal_code'), pick('country'),
   pick('currency'), pick('timezone'), JSON.stringify(pick('opening_hours')), pick('slot_interval_min'), pick('min_notice_hours'),
   pick('booking_horizon_days'), b.booking_enabled !== undefined ? (b.booking_enabled ? 1 : 0) : c.booking_enabled, c.id);
-  logActivity(c.id, req.user.id, 'updated', 'company', c.id, `${req.user.name} updated company settings`);
+  logActivity(c.id, req.user.id, 'updated', 'company', c.id, `${req.user.name} heeft de bedrijfsinstellingen gewijzigd`);
   res.json({ company: getCompany(c.id) });
 });
 
 router.put('/company/logo', owner, (req, res) => {
   if (!req.subscription.features.includes('custom_branding')) {
-    throw new HttpError(402, 'A custom logo is part of the Business plan. Upgrade in Settings → Billing.');
+    throw new HttpError(402, 'Een eigen logo zit in het Business-abonnement. Upgrade via Instellingen → Abonnement.');
   }
-  const { dataUrl } = parse(z.object({ dataUrl: z.string().max(400_000, 'image must be smaller than 300 KB').nullable() }), req.body);
-  if (dataUrl && !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(dataUrl)) throw badRequest('Logo must be a PNG, JPEG or WebP image.');
+  const { dataUrl } = parse(z.object({ dataUrl: z.string().max(400_000, 'de afbeelding moet kleiner zijn dan 300 KB').nullable() }), req.body);
+  if (dataUrl && !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(dataUrl)) throw badRequest('Het logo moet een PNG-, JPEG- of WebP-afbeelding zijn.');
   run('UPDATE companies SET logo_data_url = ? WHERE id = ?', dataUrl, req.user.companyId);
   res.json({ ok: true });
 });
@@ -65,8 +65,8 @@ async function issueInvite(req, user) {
   const token = createAuthToken(user.id, 'invite', 72);
   const link = `${config.appUrl}/accept-invite?token=${token}`;
   const company = getCompany(req.user.companyId);
-  await sendEmail(company.id, user.email, `You're invited to ${company.name} on CLEANFLOW`,
-    `Hi ${user.name},\n\n${req.user.name} invited you to join ${company.name} on CLEANFLOW as ${user.role}.\nSet your password here (valid for 72 hours):\n\n${link}`);
+  await sendEmail(company.id, user.email, `Je bent uitgenodigd voor ${company.name} op CLEANFLOW`,
+    `Hallo ${user.name},\n\n${req.user.name} heeft je uitgenodigd voor ${company.name} op CLEANFLOW, als ${user.role === 'manager' ? 'manager' : 'medewerker'}.\nKies hier je wachtwoord (72 uur geldig):\n\n${link}`);
   return { link, emailDelivered: config.smtp.configured };
 }
 
@@ -75,20 +75,20 @@ router.post('/team/invite', admin, async (req, res) => {
     name: v.name, email: v.email, role: z.enum(['manager', 'employee']),
     employee_id: z.number().int().nullable().optional(),
   }), req.body);
-  if (b.role === 'manager' && req.user.role !== 'owner') throw forbidden('Only the owner can invite managers.');
+  if (b.role === 'manager' && req.user.role !== 'owner') throw forbidden('Alleen de eigenaar kan managers uitnodigen.');
   if (b.role === 'employee' && !req.subscription.features.includes('employees')) {
-    throw new HttpError(402, 'Employee accounts are part of the Professional plan. Upgrade in Settings → Billing.');
+    throw new HttpError(402, 'Accounts voor medewerkers zitten in het Professional-abonnement. Upgrade via Instellingen → Abonnement.');
   }
   const limit = PLANS[req.subscription.plan].limits.teamMembers;
   const current = one(`SELECT COUNT(*) n FROM users WHERE company_id = ? AND status != 'disabled'`, req.user.companyId).n;
-  if (current >= limit) throw new HttpError(402, `Your plan includes up to ${limit} user accounts. Upgrade to add more.`);
-  if (one('SELECT 1 FROM users WHERE email = ?', b.email)) throw new HttpError(409, 'A user with this email already exists.');
+  if (current >= limit) throw new HttpError(402, `Je abonnement heeft maximaal ${limit} gebruikersaccounts. Upgrade om er meer toe te voegen.`);
+  if (one('SELECT 1 FROM users WHERE email = ?', b.email)) throw new HttpError(409, 'Er bestaat al een gebruiker met dit e-mailadres.');
 
   const userId = tx(() => {
     let employeeId = b.employee_id ?? null;
     if (employeeId) {
-      if (!one('SELECT 1 FROM employees WHERE id = ? AND company_id = ?', employeeId, req.user.companyId)) throw notFound('Employee');
-      if (one('SELECT 1 FROM users WHERE employee_id = ?', employeeId)) throw badRequest('That team member already has a login.');
+      if (!one('SELECT 1 FROM employees WHERE id = ? AND company_id = ?', employeeId, req.user.companyId)) throw notFound('Medewerker');
+      if (one('SELECT 1 FROM users WHERE employee_id = ?', employeeId)) throw badRequest('Dit teamlid heeft al een inlogaccount.');
     } else if (b.role === 'employee') {
       employeeId = Number(run(`INSERT INTO employees (company_id, name, email, work_schedule) VALUES (?, ?, ?, ?)`,
         req.user.companyId, b.name, b.email, JSON.stringify(DEFAULT_WORK_SCHEDULE)).lastInsertRowid);
@@ -98,13 +98,13 @@ router.post('/team/invite', admin, async (req, res) => {
   });
   const user = one('SELECT * FROM users WHERE id = ?', userId);
   const invite = await issueInvite(req, user);
-  logActivity(req.user.companyId, req.user.id, 'invited', 'user', userId, `${req.user.name} invited ${b.name} as ${b.role}`);
+  logActivity(req.user.companyId, req.user.id, 'invited', 'user', userId, `${req.user.name} heeft ${b.name} uitgenodigd als ${b.role === 'manager' ? 'manager' : 'medewerker'}`);
   res.status(201).json({ user, invite });
 });
 
 router.post('/team/:id/resend-invite', admin, async (req, res) => {
   const user = one(`SELECT * FROM users WHERE id = ? AND company_id = ? AND status = 'invited'`, idParam(req.params.id), req.user.companyId);
-  if (!user) throw notFound('Pending invitation');
+  if (!user) throw notFound('Openstaande uitnodiging');
   if (user.role === 'manager' && req.user.role !== 'owner') throw forbidden();
   res.json({ invite: await issueInvite(req, user) });
 });
@@ -113,9 +113,9 @@ router.patch('/team/:id', owner, (req, res) => {
   const id = idParam(req.params.id);
   const b = parse(z.object({ role: z.enum(['manager', 'employee']).optional(), status: z.enum(['active', 'disabled']).optional() }), req.body);
   const user = one('SELECT * FROM users WHERE id = ? AND company_id = ?', id, req.user.companyId);
-  if (!user) throw notFound('User');
-  if (user.role === 'owner') throw badRequest('The owner account cannot be changed here.');
-  if (b.status === 'active' && user.status === 'invited') throw badRequest('This user has not accepted their invitation yet.');
+  if (!user) throw notFound('Gebruiker');
+  if (user.role === 'owner') throw badRequest('Het account van de eigenaar kan hier niet worden gewijzigd.');
+  if (b.status === 'active' && user.status === 'invited') throw badRequest('Deze gebruiker heeft de uitnodiging nog niet geaccepteerd.');
   if (b.role === 'employee' && !user.employee_id) {
     const eid = Number(run(`INSERT INTO employees (company_id, name, email, work_schedule) VALUES (?, ?, ?, ?)`,
       req.user.companyId, user.name, user.email, JSON.stringify(DEFAULT_WORK_SCHEDULE)).lastInsertRowid);
@@ -123,17 +123,17 @@ router.patch('/team/:id', owner, (req, res) => {
   }
   run('UPDATE users SET role = ?, status = ? WHERE id = ?', b.role ?? user.role, b.status ?? user.status, id);
   if (b.status === 'disabled' || (b.role && b.role !== user.role)) run('DELETE FROM sessions WHERE user_id = ?', id);
-  logActivity(req.user.companyId, req.user.id, 'updated', 'user', id, `${req.user.name} changed access for ${user.name}`);
+  logActivity(req.user.companyId, req.user.id, 'updated', 'user', id, `${req.user.name} heeft de toegang van ${user.name} gewijzigd`);
   res.json({ ok: true });
 });
 
 router.delete('/team/:id', owner, (req, res) => {
   const id = idParam(req.params.id);
   const user = one('SELECT * FROM users WHERE id = ? AND company_id = ?', id, req.user.companyId);
-  if (!user) throw notFound('User');
-  if (user.role === 'owner') throw badRequest('The owner account cannot be removed.');
+  if (!user) throw notFound('Gebruiker');
+  if (user.role === 'owner') throw badRequest('Het account van de eigenaar kan niet worden verwijderd.');
   run('DELETE FROM users WHERE id = ?', id);
-  logActivity(req.user.companyId, req.user.id, 'removed', 'user', id, `${req.user.name} removed login for ${user.name}`);
+  logActivity(req.user.companyId, req.user.id, 'removed', 'user', id, `${req.user.name} heeft het inlogaccount van ${user.name} verwijderd`);
   res.json({ ok: true });
 });
 
@@ -174,7 +174,7 @@ notificationsRouter.get('/', (req, res) => {
 notificationsRouter.post('/:id/read', (req, res) => {
   const id = idParam(req.params.id);
   const n = one(`SELECT n.id FROM notifications n WHERE n.id = ? AND n.company_id = ? AND ${visibleClause(req.user)}`, id, req.user.companyId);
-  if (!n) throw notFound('Notification');
+  if (!n) throw notFound('Melding');
   run('INSERT OR IGNORE INTO notification_reads (notification_id, user_id) VALUES (?, ?)', id, req.user.id);
   res.json({ ok: true });
 });

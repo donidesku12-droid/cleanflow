@@ -23,22 +23,22 @@ router.get('/settings', (req, res) => {
 router.put('/settings', (req, res) => {
   const b = parse(z.object({
     enabled: z.boolean(),
-    assistant_name: v.text(40).min(1, 'is required'),
-    welcome_message: v.text(500).min(1, 'is required'),
+    assistant_name: v.text(40).min(1, 'is verplicht'),
+    welcome_message: v.text(500).min(1, 'is verplicht'),
     company_info: v.optText(6000),
     policies: v.optText(6000),
     service_area: v.optText(1000),
-    languages: z.array(z.enum(Object.keys(LANGUAGES))).min(1, 'select at least one language'),
-    escalation_message: v.text(500).min(1, 'is required'),
+    languages: z.array(z.enum(Object.keys(LANGUAGES))).min(1, 'kies minimaal één taal'),
+    escalation_message: v.text(500).min(1, 'is verplicht'),
   }), req.body);
   run(`UPDATE ai_settings SET enabled = ?, assistant_name = ?, welcome_message = ?, company_info = ?, policies = ?, service_area = ?, languages = ?, escalation_message = ?
        WHERE company_id = ?`, +b.enabled, b.assistant_name, b.welcome_message, b.company_info, b.policies, b.service_area,
   JSON.stringify(b.languages), b.escalation_message, req.user.companyId);
-  logActivity(req.user.companyId, req.user.id, 'updated', 'assistant', null, `${req.user.name} updated AI assistant settings`);
+  logActivity(req.user.companyId, req.user.id, 'updated', 'assistant', null, `${req.user.name} heeft de AI-assistent aangepast`);
   res.json({ settings: getAiSettings(req.user.companyId) });
 });
 
-const faqSchema = z.object({ question: v.text(300).min(3, 'is required'), answer: v.text(3000).min(1, 'is required') });
+const faqSchema = z.object({ question: v.text(300).min(3, 'is verplicht'), answer: v.text(3000).min(1, 'is verplicht') });
 router.post('/faqs', (req, res) => {
   const b = parse(faqSchema, req.body);
   const id = Number(run('INSERT INTO faqs (company_id, question, answer) VALUES (?, ?, ?)', req.user.companyId, b.question, b.answer).lastInsertRowid);
@@ -48,12 +48,12 @@ router.patch('/faqs/:id', (req, res) => {
   const id = idParam(req.params.id);
   const b = parse(faqSchema, req.body);
   const info = run('UPDATE faqs SET question = ?, answer = ? WHERE id = ? AND company_id = ?', b.question, b.answer, id, req.user.companyId);
-  if (!info.changes) throw notFound('FAQ');
+  if (!info.changes) throw notFound('Vraag');
   res.json({ faq: one('SELECT * FROM faqs WHERE id = ?', id) });
 });
 router.delete('/faqs/:id', (req, res) => {
   const info = run('DELETE FROM faqs WHERE id = ? AND company_id = ?', idParam(req.params.id), req.user.companyId);
-  if (!info.changes) throw notFound('FAQ');
+  if (!info.changes) throw notFound('Vraag');
   res.json({ ok: true });
 });
 
@@ -70,7 +70,7 @@ router.get('/conversations', (req, res) => {
 
 function loadConversation(req) {
   const c = one('SELECT * FROM chat_conversations WHERE id = ? AND company_id = ?', idParam(req.params.id), req.user.companyId);
-  if (!c) throw notFound('Conversation');
+  if (!c) throw notFound('Gesprek');
   return c;
 }
 
@@ -81,7 +81,7 @@ router.get('/conversations/:id', (req, res) => {
 
 router.post('/conversations/:id/reply', (req, res) => {
   const c = loadConversation(req);
-  const { message } = parse(z.object({ message: v.text(2000).min(1, 'is required') }), req.body);
+  const { message } = parse(z.object({ message: v.text(2000).min(1, 'is verplicht') }), req.body);
   run(`INSERT INTO chat_messages (conversation_id, role, content, meta) VALUES (?, 'staff', ?, ?)`, c.id, message, JSON.stringify({ by: req.user.name }));
   run(`UPDATE chat_conversations SET updated_at = datetime('now') WHERE id = ?`, c.id);
   res.status(201).json({ messages: all('SELECT * FROM chat_messages WHERE conversation_id = ? ORDER BY id', c.id) });
@@ -99,7 +99,7 @@ router.post('/test', async (req, res) => {
   const b = parse(z.object({
     messages: z.array(z.object({ role: z.enum(['visitor', 'assistant']), content: v.text(2000).min(1) })).min(1).max(30),
   }), req.body);
-  if (b.messages[b.messages.length - 1].role !== 'visitor') throw badRequest('The last message must be from the visitor');
+  if (b.messages[b.messages.length - 1].role !== 'visitor') throw badRequest('Het laatste bericht moet van de bezoeker zijn');
   res.json(await respond(req.user.companyId, b.messages));
 });
 
@@ -112,9 +112,9 @@ export async function handleVisitorMessage(company, conversation, text) {
     JSON.stringify({ engine: result.engine, intent: result.intent, escalate: result.escalate }));
   if (result.escalate && conversation.status !== 'escalated') {
     run(`UPDATE chat_conversations SET status = 'escalated', escalation_reason = ?, updated_at = datetime('now') WHERE id = ?`,
-      result.escalation_reason || 'Needs a human', conversation.id);
+      result.escalation_reason || 'Heeft een mens nodig', conversation.id);
     notifySafe(company.id, 'chat_escalated', {
-      title: 'Chat needs a human reply', body: `${result.escalation_reason || 'Escalated'} – “${text.slice(0, 120)}”`,
+      title: 'Chat wacht op antwoord van een mens', body: `${result.escalation_reason || 'Doorgestuurd'} – “${text.slice(0, 120)}”`,
       link: `/app/assistant?tab=inbox&open=${conversation.id}`, emailTo: [company.email],
     });
   } else {

@@ -8,7 +8,7 @@ import { Button, Card, CardHeader, StatCard, StatusBadge, EmptyState, ErrorState
 import { EmployeeForm, EMP_STATUS } from './Employees.jsx';
 import { RevenueBars } from '../../components/charts.jsx';
 
-const DAYS = [['mon', 'Mon'], ['tue', 'Tue'], ['wed', 'Wed'], ['thu', 'Thu'], ['fri', 'Fri'], ['sat', 'Sat'], ['sun', 'Sun']];
+const DAYS = [['mon', 'Ma'], ['tue', 'Di'], ['wed', 'Wo'], ['thu', 'Do'], ['fri', 'Vr'], ['sat', 'Za'], ['sun', 'Zo']];
 
 function JobList({ items, empty }) {
   if (!items.length) return <EmptyState icon={CalendarCheck} title={empty} />;
@@ -43,13 +43,13 @@ export default function EmployeeDetail() {
 
   const remove = async () => {
     setBusy(true);
-    try { await api.del(`/employees/${e.id}`); toast.success('Employee removed'); navigate('/app/employees'); }
+    try { await api.del(`/employees/${e.id}`); toast.success('Medewerker verwijderd'); navigate('/app/employees'); }
     catch (err) { toast.error(err.message); setDeleting(false); } finally { setBusy(false); }
   };
 
   return (
     <div>
-      {isAdmin && <Link to="/app/employees" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-900"><ArrowLeft className="size-4" />Employees</Link>}
+      {isAdmin && <Link to="/app/employees" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-navy-500 hover:text-navy-900"><ArrowLeft className="size-4" />Medewerkers</Link>}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Avatar name={e.name} color={e.color} size="size-14" className="text-lg" />
@@ -60,54 +60,54 @@ export default function EmployeeDetail() {
         </div>
         {isAdmin && (
           <div className="flex gap-2">
-            <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>Edit</Button>
-            <Button variant="danger-ghost" icon={Trash2} onClick={() => setDeleting(true)}>Remove</Button>
+            <Button variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>Wijzigen</Button>
+            <Button variant="danger-ghost" icon={Trash2} onClick={() => setDeleting(true)}>Verwijderen</Button>
           </div>
         )}
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Upcoming jobs" value={e.upcoming_jobs} icon={CalendarCheck} tone="sky" />
-        <StatCard label="Completed (30 days)" value={e.completed_30d} icon={CheckCircle2} />
-        <StatCard label="Completed all time" value={e.completed_jobs} icon={Activity} tone="violet" />
+        <StatCard label="Komende klussen" value={e.upcoming_jobs} icon={CalendarCheck} tone="sky" />
+        <StatCard label="Afgerond (30 dagen)" value={e.completed_30d} icon={CheckCircle2} />
+        <StatCard label="Totaal afgerond" value={e.completed_jobs} icon={Activity} tone="violet" />
       </div>
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Contact" />
+            <CardHeader title="Contactgegevens" />
             <div className="space-y-3 p-5 text-sm">
               <p className="flex items-center gap-3"><Mail className="size-4 text-navy-300" />{e.email ? <a href={`mailto:${e.email}`} className="hover:underline">{e.email}</a> : '—'}</p>
               <p className="flex items-center gap-3"><Phone className="size-4 text-navy-300" />{e.phone ? <a href={`tel:${e.phone}`} className="hover:underline">{e.phone}</a> : '—'}</p>
-              {isAdmin && <p className="text-xs text-navy-400">{e.user_id ? `Has a ${e.user_role} login (${e.user_status})` : 'No login account – invite them from Settings → Team.'}</p>}
+              {isAdmin && <p className="text-xs text-navy-400">{e.user_id ? `Kan inloggen als ${{ owner: 'eigenaar', manager: 'manager', employee: 'medewerker' }[e.user_role]} (${{ active: 'actief', invited: 'uitgenodigd', disabled: 'geblokkeerd' }[e.user_status]})` : 'Geen inlogaccount – nodig deze persoon uit via Instellingen → Team.'}</p>}
             </div>
           </Card>
           <Card>
-            <CardHeader title="Work schedule" />
+            <CardHeader title="Werkrooster" />
             <ul className="divide-y divide-navy-50 px-5 py-2 text-sm">
               {DAYS.map(([d, l]) => (
                 <li key={d} className="flex justify-between py-2"><span className="text-navy-500">{l}</span>
-                  <span className={e.work_schedule[d].off ? 'text-navy-300' : 'flex items-center gap-1.5 font-medium'}>{e.work_schedule[d].off ? 'Off' : <><Clock className="size-3.5 text-navy-300" />{e.work_schedule[d].start} – {e.work_schedule[d].end}</>}</span></li>
+                  <span className={e.work_schedule[d].off ? 'text-navy-300' : 'flex items-center gap-1.5 font-medium'}>{e.work_schedule[d].off ? 'Vrij' : <><Clock className="size-3.5 text-navy-300" />{e.work_schedule[d].start} – {e.work_schedule[d].end}</>}</span></li>
               ))}
             </ul>
           </Card>
         </div>
         <div className="space-y-6 lg:col-span-2">
           <Card>
-            <CardHeader title="Completed jobs per week" description="Last 4 weeks" />
+            <CardHeader title="Afgeronde klussen per week" description="Laatste 4 weken" />
             <div className="p-4"><RevenueBars data={weekly} xKey="week" dataKey="jobs" height={180} /></div>
           </Card>
           <Card>
-            <div className="px-4 pt-2"><Tabs value={tab} onChange={setTab} tabs={[{ value: 'upcoming', label: 'Assigned jobs', count: upcoming.length }, { value: 'completed', label: 'Completed', count: completed.length }, { value: 'activity', label: 'Activity' }]} /></div>
-            {tab === 'upcoming' && <JobList items={upcoming} empty="No upcoming jobs assigned" />}
-            {tab === 'completed' && <JobList items={completed} empty="No completed jobs yet" />}
-            {tab === 'activity' && (activity.length === 0 ? <EmptyState icon={Activity} title="No activity yet" /> : (
+            <div className="px-4 pt-2"><Tabs value={tab} onChange={setTab} tabs={[{ value: 'upcoming', label: 'Toegewezen klussen', count: upcoming.length }, { value: 'completed', label: 'Afgerond', count: completed.length }, { value: 'activity', label: 'Activiteit' }]} /></div>
+            {tab === 'upcoming' && <JobList items={upcoming} empty="Geen komende klussen toegewezen" />}
+            {tab === 'completed' && <JobList items={completed} empty="Nog geen afgeronde klussen" />}
+            {tab === 'activity' && (activity.length === 0 ? <EmptyState icon={Activity} title="Nog geen activiteit" /> : (
               <ul className="space-y-1 p-4">{activity.map((a) => <li key={a.id} className="flex justify-between gap-4 rounded-lg px-2 py-1.5 text-sm"><span className="text-navy-700">{a.summary}</span><span className="shrink-0 text-xs text-navy-400">{timeAgo(a.created_at)}</span></li>)}</ul>
             ))}
           </Card>
         </div>
       </div>
       {isAdmin && <EmployeeForm open={editing} initial={e} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); res.reload(true); }} />}
-      <ConfirmDialog open={deleting} onClose={() => setDeleting(false)} onConfirm={remove} loading={busy} danger title={`Remove ${e.name}?`} confirmLabel="Remove"
-        message="Team members with job history can't be removed – set their status to Inactive instead. Removing also deletes their login." />
+      <ConfirmDialog open={deleting} onClose={() => setDeleting(false)} onConfirm={remove} loading={busy} danger title={`${e.name} verwijderen?`} confirmLabel="Verwijderen"
+        message="Teamleden met eerdere klussen kunnen niet worden verwijderd – zet ze dan op Inactief. Bij verwijderen verdwijnt ook hun inlogaccount." />
     </div>
   );
 }

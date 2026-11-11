@@ -46,7 +46,7 @@ function capacityCheck(companyId, start, end, { employeeId = null, excludeId = n
   const busy = overlapping(companyId, start, end, excludeId);
   const employees = activeEmployees(companyId);
   if (employees.length === 0) {
-    return { ok: busy.length === 0, reason: 'That time is already booked.' };
+    return { ok: busy.length === 0, reason: 'Die tijd is al geboekt.' };
   }
   const busyEmployees = new Set(busy.filter((b) => b.employee_id).map((b) => b.employee_id));
   const unassigned = busy.filter((b) => !b.employee_id).length;
@@ -54,15 +54,15 @@ function capacityCheck(companyId, start, end, { employeeId = null, excludeId = n
 
   if (employeeId) {
     const emp = employees.find((e) => e.id === employeeId);
-    if (!emp) return { ok: false, reason: 'That employee is not active.' };
-    if (busyEmployees.has(employeeId)) return { ok: false, reason: `${emp.name} already has a job at that time.` };
-    if (!scheduleCovers(emp.work_schedule, start, end)) return { ok: false, reason: `${emp.name} is not scheduled to work at that time.` };
+    if (!emp) return { ok: false, reason: 'Die medewerker is niet actief.' };
+    if (busyEmployees.has(employeeId)) return { ok: false, reason: `${emp.name} heeft op dat moment al een klus.` };
+    if (!scheduleCovers(emp.work_schedule, start, end)) return { ok: false, reason: `${emp.name} is op dat moment niet ingeroosterd.` };
     // Taking this employee must still leave room for unassigned requests.
     const remaining = free.filter((e) => e.id !== employeeId).length;
-    if (remaining < unassigned) return { ok: false, reason: 'Not enough staff left for already pending requests at that time.' };
+    if (remaining < unassigned) return { ok: false, reason: 'Er is niet genoeg personeel over voor de openstaande aanvragen op dat moment.' };
     return { ok: true };
   }
-  return { ok: free.length > unassigned, reason: 'No team member is available at that time.' };
+  return { ok: free.length > unassigned, reason: 'Er is op dat moment geen medewerker beschikbaar.' };
 }
 
 /**
@@ -72,14 +72,14 @@ function capacityCheck(companyId, start, end, { employeeId = null, excludeId = n
 export function assertBookable(company, start, durationMin, opts = {}) {
   const { employeeId = null, excludeId = null, enforceHours = true, enforceNotice = true } = opts;
   const end = addMinutes(start, durationMin);
-  if (end.slice(0, 10) !== start.slice(0, 10)) throw badRequest('A booking must start and end on the same day.');
+  if (end.slice(0, 10) !== start.slice(0, 10)) throw badRequest('Een afspraak moet op dezelfde dag beginnen en eindigen.');
   const now = nowIn(company.timezone);
-  if (start < now) throw badRequest('That time is in the past.');
+  if (start < now) throw badRequest('Die tijd ligt in het verleden.');
   if (enforceNotice && start < addMinutes(now, company.min_notice_hours * 60)) {
-    throw conflict(`Bookings need at least ${company.min_notice_hours} hours notice.`);
+    throw conflict(`Je moet minimaal ${company.min_notice_hours} uur van tevoren boeken.`);
   }
   if (enforceHours && !withinOpeningHours(company, start, end)) {
-    throw conflict('That time is outside our opening hours.');
+    throw conflict('Die tijd valt buiten de openingstijden.');
   }
   const cap = capacityCheck(company.id, start, end, { employeeId, excludeId });
   if (!cap.ok) throw conflict(cap.reason);
@@ -121,6 +121,6 @@ export function employeeAvailability(company, start, end, excludeId) {
   return activeEmployees(company.id).map((e) => ({
     id: e.id, name: e.name,
     available: scheduleCovers(e.work_schedule, start, end) && !busyIds.has(e.id),
-    reason: busyIds.has(e.id) ? 'Has another job' : (!scheduleCovers(e.work_schedule, start, end) ? 'Not scheduled' : null),
+    reason: busyIds.has(e.id) ? 'Heeft al een klus' : (!scheduleCovers(e.work_schedule, start, end) ? 'Niet ingeroosterd' : null),
   }));
 }

@@ -16,11 +16,11 @@ async function request(method, url, body) {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError(0, 'Could not reach the server. Check your connection and try again.');
+    throw new ApiError(0, 'Kan de server niet bereiken. Controleer je internetverbinding en probeer het opnieuw.');
   }
   const data = res.headers.get('content-type')?.includes('application/json') ? await res.json() : null;
   if (!res.ok) {
-    const err = new ApiError(res.status, data?.error || `Request failed (${res.status})`, data?.details);
+    const err = new ApiError(res.status, data?.error || `Verzoek mislukt (${res.status})`, data?.details);
     if (res.status === 401 && !url.startsWith('/auth/')) window.dispatchEvent(new CustomEvent('cf:unauthorized'));
     throw err;
   }

@@ -18,7 +18,7 @@ const schema = z.object({
   description: v.optText(1000),
   price: v.money,
   price_unit: z.enum(['fixed', 'from', 'per_hour']).default('fixed'),
-  duration_min: z.coerce.number().int().min(15, 'must be at least 15 minutes').max(720, 'must be 12 hours or less'),
+  duration_min: z.coerce.number().int().min(15, 'moet minimaal 15 minuten zijn').max(720, 'mag maximaal 12 uur zijn'),
   active: z.boolean().default(true),
 });
 
@@ -28,33 +28,33 @@ router.post('/', admin, (req, res) => {
   const info = run(`INSERT INTO services (company_id, name, description, price_cents, price_unit, duration_min, active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     req.user.companyId, b.name, b.description, Math.round(b.price * 100), b.price_unit, b.duration_min, b.active ? 1 : 0, order);
   const id = Number(info.lastInsertRowid);
-  logActivity(req.user.companyId, req.user.id, 'created', 'service', id, `${req.user.name} added service ${b.name}`);
+  logActivity(req.user.companyId, req.user.id, 'created', 'service', id, `${req.user.name} heeft dienst ${b.name} toegevoegd`);
   res.status(201).json({ service: one('SELECT * FROM services WHERE id = ?', id) });
 });
 
 router.patch('/:id', admin, (req, res) => {
   const id = idParam(req.params.id);
   const s = one('SELECT * FROM services WHERE id = ? AND company_id = ?', id, req.user.companyId);
-  if (!s) throw notFound('Service');
+  if (!s) throw notFound('Dienst');
   const b = parse(schema.partial(), req.body);
   run(`UPDATE services SET name = ?, description = ?, price_cents = ?, price_unit = ?, duration_min = ?, active = ? WHERE id = ?`,
     b.name ?? s.name, b.description !== undefined ? b.description : s.description,
     b.price !== undefined ? Math.round(b.price * 100) : s.price_cents, b.price_unit ?? s.price_unit,
     b.duration_min ?? s.duration_min, b.active !== undefined ? (b.active ? 1 : 0) : s.active, id);
-  logActivity(req.user.companyId, req.user.id, 'updated', 'service', id, `${req.user.name} updated service ${b.name ?? s.name}`);
+  logActivity(req.user.companyId, req.user.id, 'updated', 'service', id, `${req.user.name} heeft dienst ${b.name ?? s.name} gewijzigd`);
   res.json({ service: one('SELECT * FROM services WHERE id = ?', id) });
 });
 
 router.delete('/:id', admin, (req, res) => {
   const id = idParam(req.params.id);
   const s = one('SELECT * FROM services WHERE id = ? AND company_id = ?', id, req.user.companyId);
-  if (!s) throw notFound('Service');
+  if (!s) throw notFound('Dienst');
   if (one('SELECT 1 FROM bookings WHERE service_id = ?', id)) {
     run('UPDATE services SET active = 0 WHERE id = ?', id);
-    return res.json({ ok: true, deactivated: true, message: 'This service has bookings, so it was deactivated instead of deleted.' });
+    return res.json({ ok: true, deactivated: true, message: 'Deze dienst heeft boekingen en is daarom uitgezet in plaats van verwijderd.' });
   }
   run('DELETE FROM services WHERE id = ?', id);
-  logActivity(req.user.companyId, req.user.id, 'deleted', 'service', id, `${req.user.name} deleted service ${s.name}`);
+  logActivity(req.user.companyId, req.user.id, 'deleted', 'service', id, `${req.user.name} heeft dienst ${s.name} verwijderd`);
   res.json({ ok: true });
 });
 

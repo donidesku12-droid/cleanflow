@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import { run } from '../db.js';
 
+z.config(z.locales.nl());
+
 // ---------- Errors ----------
 export class HttpError extends Error {
   constructor(status, message, details) {
@@ -11,8 +13,8 @@ export class HttpError extends Error {
   }
 }
 export const badRequest = (msg, details) => new HttpError(400, msg, details);
-export const notFound = (what = 'Resource') => new HttpError(404, `${what} not found`);
-export const forbidden = (msg = 'You do not have permission to do that') => new HttpError(403, msg);
+export const notFound = (what = 'Item') => new HttpError(404, `${what} niet gevonden`);
+export const forbidden = (msg = 'Je hebt hier geen toestemming voor') => new HttpError(403, msg);
 export const conflict = (msg) => new HttpError(409, msg);
 
 /** Parse with zod; throws 400 with field errors. */
@@ -25,11 +27,21 @@ export function parse(schema, data) {
       if (!fields[key]) fields[key] = issue.message;
     }
     const first = Object.entries(fields)[0];
-    throw badRequest(first ? `${humanize(first[0])}: ${first[1]}` : 'Invalid input', { fields });
+    throw badRequest(first ? `${humanize(first[0])}: ${first[1]}` : 'Ongeldige invoer', { fields });
   }
   return result.data;
 }
-const humanize = (k) => (k === '_' ? 'Input' : k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()));
+const FIELD_NL = {
+  name: 'Naam', email: 'E-mailadres', phone: 'Telefoonnummer', password: 'Wachtwoord', newPassword: 'Nieuw wachtwoord', currentPassword: 'Huidig wachtwoord',
+  companyName: 'Bedrijfsnaam', acceptTerms: 'Voorwaarden', address: 'Adres', city: 'Plaats', postal_code: 'Postcode', country: 'Land', notes: 'Notities',
+  tags: 'Labels', date: 'Datum', time: 'Tijd', service_id: 'Dienst', customer_id: 'Klant', employee_id: 'Medewerker', instructions: 'Bijzonderheden',
+  price: 'Prijs', amount: 'Bedrag', method: 'Betaalwijze', duration_min: 'Duur', description: 'Omschrijving', job_title: 'Functie', status: 'Status',
+  privacy_consent: 'Toestemming', consent: 'Toestemming', message: 'Bericht', question: 'Vraag', answer: 'Antwoord', website: 'Website',
+  assistant_name: 'Naam van de assistent', welcome_message: 'Welkomstbericht', escalation_message: 'Bericht bij doorsturen', languages: 'Talen',
+  timezone: 'Tijdzone', currency: 'Valuta', reason: 'Reden', from: 'Van', to: 'Tot', token: 'Link', role: 'Rol', plan: 'Abonnement',
+  'new_customer.name': 'Naam klant', 'new_customer.email': 'E-mailadres klant', 'new_customer.phone': 'Telefoonnummer klant',
+};
+const humanize = (k) => (k === '_' ? 'Invoer' : FIELD_NL[k] || FIELD_NL[k.split('.').pop()] || k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()));
 
 export const idParam = (v) => {
   const n = Number(v);
@@ -40,20 +52,20 @@ export const idParam = (v) => {
 // ---------- Validation primitives ----------
 const trimmed = (max) => z.string().trim().max(max);
 export const v = {
-  name: trimmed(120).min(1, 'is required'),
+  name: trimmed(120).min(1, 'is verplicht'),
   text: (max = 2000) => trimmed(max),
   optText: (max = 2000) => trimmed(max).optional().nullable().transform((s) => (s ? s : null)),
-  email: z.string().trim().toLowerCase().max(254).email('must be a valid email address'),
-  optEmail: z.union([z.literal(''), z.null(), z.string().trim().toLowerCase().max(254).email('must be a valid email address')])
+  email: z.string().trim().toLowerCase().max(254).email('moet een geldig e-mailadres zijn'),
+  optEmail: z.union([z.literal(''), z.null(), z.string().trim().toLowerCase().max(254).email('moet een geldig e-mailadres zijn')])
     .optional().transform((s) => (s ? s : null)),
-  phone: z.string().trim().max(32).regex(/^[+()\d\s.-]{6,32}$/, 'must be a valid phone number'),
-  optPhone: z.union([z.literal(''), z.null(), z.string().trim().max(32).regex(/^[+()\d\s.-]{6,32}$/, 'must be a valid phone number')])
+  phone: z.string().trim().max(32).regex(/^[+()\d\s.-]{6,32}$/, 'moet een geldig telefoonnummer zijn'),
+  optPhone: z.union([z.literal(''), z.null(), z.string().trim().max(32).regex(/^[+()\d\s.-]{6,32}$/, 'moet een geldig telefoonnummer zijn')])
     .optional().transform((s) => (s ? s : null)),
-  password: z.string().min(8, 'must be at least 8 characters').max(200)
-    .regex(/[A-Za-z]/, 'must contain a letter').regex(/\d/, 'must contain a number'),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be a date (YYYY-MM-DD)'),
-  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'must be a time (HH:MM)'),
-  money: z.coerce.number().min(0, 'cannot be negative').max(100000, 'is too large'),
+  password: z.string().min(8, 'moet minimaal 8 tekens hebben').max(200)
+    .regex(/[A-Za-z]/, 'moet een letter bevatten').regex(/\d/, 'moet een cijfer bevatten'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'moet een datum zijn (JJJJ-MM-DD)'),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'moet een tijd zijn (UU:MM)'),
+  money: z.coerce.number().min(0, 'mag niet negatief zijn').max(100000, 'is te hoog'),
 };
 
 // ---------- Plans & feature gating ----------
@@ -120,7 +132,7 @@ export function nowIn(timezone) {
 export const todayIn = (tz) => nowIn(tz).slice(0, 10);
 
 export function formatMoney(cents, currency = 'EUR') {
-  return new Intl.NumberFormat('en-IE', { style: 'currency', currency }).format(cents / 100);
+  return new Intl.NumberFormat('nl-NL', { style: 'currency', currency }).format(cents / 100);
 }
 
 // ---------- Activity log ----------
@@ -150,8 +162,21 @@ export const DEFAULT_WORK_SCHEDULE = {
 
 export const hoursSchema = z.object(Object.fromEntries(DAYS.map((d) => [d, z.object({
   open: v.time, close: v.time, closed: z.boolean(),
-}).refine((h) => h.closed || toMin(h.open) < toMin(h.close), 'closing time must be after opening time')])));
+}).refine((h) => h.closed || toMin(h.open) < toMin(h.close), 'de sluitingstijd moet na de openingstijd liggen')])));
 
 export const scheduleSchema = z.object(Object.fromEntries(DAYS.map((d) => [d, z.object({
   start: v.time, end: v.time, off: z.boolean(),
-}).refine((h) => h.off || toMin(h.start) < toMin(h.end), 'end time must be after start time')])));
+}).refine((h) => h.off || toMin(h.start) < toMin(h.end), 'de eindtijd moet na de begintijd liggen')])));
+
+/** 'YYYY-MM-DD HH:MM' → 'donderdag 12 november 2026 om 08:00' (for emails and notifications). */
+export function fmtWhen(dt) {
+  if (!dt) return '';
+  const d = new Date(`${dt.slice(0, 10)}T12:00:00Z`).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return dt.length > 10 ? `${d} om ${dt.slice(11, 16)}` : d;
+}
+/** Short form: 'do 12 nov 08:00'. */
+export function fmtShort(dt) {
+  if (!dt) return '';
+  const d = new Date(`${dt.slice(0, 10)}T12:00:00Z`).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  return dt.length > 10 ? `${d} ${dt.slice(11, 16)}` : d;
+}

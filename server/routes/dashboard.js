@@ -28,13 +28,13 @@ export function revenueSeries(companyId, today, { weeks = 8, months = 12 } = {})
   const thisWeek = weekStart(today);
   for (let i = weeks - 1; i >= 0; i--) {
     const from = addDays(thisWeek, -7 * i);
-    weekly.push({ label: from.slice(5).replace('-', '/'), from, revenue: sumPayments(companyId, from, addDays(from, 7)) / 100 });
+    weekly.push({ label: `${from.slice(8)}-${from.slice(5, 7)}`, from, revenue: sumPayments(companyId, from, addDays(from, 7)) / 100 });
   }
   const monthly = [];
   const ym = today.slice(0, 7);
   for (let i = months - 1; i >= 0; i--) {
     const m = shiftMonth(ym, -i);
-    const label = new Date(`${m}-01T00:00:00Z`).toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
+    const label = new Date(`${m}-01T00:00:00Z`).toLocaleString('nl-NL', { month: 'short', timeZone: 'UTC' }).replace('.', '');
     monthly.push({ label: `${label} ${m.slice(2, 4)}`, month: m, revenue: sumPayments(companyId, `${m}-01`, `${shiftMonth(m, 1)}-01`) / 100 });
   }
   return { weekly, monthly };
@@ -115,7 +115,7 @@ function rangeOrDefault(req, company) {
   const q = parse(analyticsQuery.partial(), req.query);
   const from = q.from || addDays(today, -89);
   const to = q.to || today;
-  if (from > to) throw badRequest('The start date must be before the end date.');
+  if (from > to) throw badRequest('De begindatum moet voor de einddatum liggen.');
   return { from, to, group: q.group };
 }
 
@@ -199,36 +199,40 @@ const csvCell = (val) => {
   if (val === null || val === undefined) return '';
   let s = String(val);
   if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`; // neutralise spreadsheet formula injection
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  return /[";,\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
-const toCsv = (rows, cols) => [cols.map((c) => c[0]).join(','), ...rows.map((r) => cols.map((c) => csvCell(c[1](r))).join(','))].join('\n');
+// Semicolon-separated with decimal commas, so Dutch Excel opens it correctly.
+const toCsv = (rows, cols) => [cols.map((c) => c[0]).join(';'), ...rows.map((r) => cols.map((c) => csvCell(c[1](r))).join(';'))].join('\n');
+const STATUS_CSV = { pending: 'In afwachting', confirmed: 'Bevestigd', in_progress: 'Bezig', completed: 'Voltooid', cancelled: 'Geannuleerd', paid: 'Betaald', refunded: 'Terugbetaald' };
+const METHOD_CSV = { cash: 'Contant', card: 'Pin/kaart', bank_transfer: 'Overboeking', other: 'Anders' };
+const SOURCE_CSV = { online: 'Online', manual: 'Handmatig', assistant: 'Assistent' };
 
 router.get('/export/:report', requireRole('owner', 'manager'), requireFeature('advanced_reporting'), (req, res) => {
   const company = getCompany(req.user.companyId);
   const { from, to } = rangeOrDefault(req, company);
   const lo = `${from} 00:00`; const hi = `${to} 23:59`;
-  const money = (c) => (c / 100).toFixed(2);
+  const money = (c) => (c / 100).toFixed(2).replace('.', ',');
   let csv;
   if (req.params.report === 'bookings') {
     const rows = all(`${BOOKING_SELECT} WHERE b.company_id = ? AND b.starts_at BETWEEN ? AND ? ORDER BY b.starts_at`, company.id, lo, hi);
-    csv = toCsv(rows, [['Reference', (r) => r.reference], ['Start', (r) => r.starts_at], ['End', (r) => r.ends_at], ['Status', (r) => r.status],
-      ['Service', (r) => r.service_name], ['Customer', (r) => r.customer_name], ['Customer email', (r) => r.customer_email], ['Address', (r) => r.address],
-      ['Employee', (r) => r.employee_name], ['Price', (r) => money(r.price_cents)], ['Paid', (r) => money(r.paid_cents)], ['Source', (r) => r.source]]);
+    csv = toCsv(rows, [['Referentie', (r) => r.reference], ['Begin', (r) => r.starts_at], ['Einde', (r) => r.ends_at], ['Status', (r) => STATUS_CSV[r.status]],
+      ['Dienst', (r) => r.service_name], ['Klant', (r) => r.customer_name], ['E-mail klant', (r) => r.customer_email], ['Adres', (r) => r.address],
+      ['Medewerker', (r) => r.employee_name], ['Prijs', (r) => money(r.price_cents)], ['Betaald', (r) => money(r.paid_cents)], ['Bron', (r) => SOURCE_CSV[r.source]]]);
   } else if (req.params.report === 'payments') {
     const rows = all(`SELECT p.*, b.reference, c.name AS customer_name FROM payments p LEFT JOIN bookings b ON b.id = p.booking_id LEFT JOIN customers c ON c.id = p.customer_id
       WHERE p.company_id = ? AND p.paid_at BETWEEN ? AND ? ORDER BY p.paid_at`, company.id, lo, hi);
-    csv = toCsv(rows, [['Date', (r) => r.paid_at.slice(0, 10)], ['Booking', (r) => r.reference], ['Customer', (r) => r.customer_name],
-      ['Amount', (r) => money(r.amount_cents)], ['Method', (r) => r.method], ['Status', (r) => r.status], ['Note', (r) => r.note]]);
+    csv = toCsv(rows, [['Datum', (r) => r.paid_at.slice(0, 10)], ['Boeking', (r) => r.reference], ['Klant', (r) => r.customer_name],
+      ['Bedrag', (r) => money(r.amount_cents)], ['Betaalwijze', (r) => METHOD_CSV[r.method]], ['Status', (r) => STATUS_CSV[r.status]], ['Notitie', (r) => r.note]]);
   } else if (req.params.report === 'customers') {
     const rows = all(`SELECT c.*, (SELECT COALESCE(SUM(amount_cents),0) FROM payments p WHERE p.customer_id = c.id AND p.status='paid') spent,
       (SELECT COUNT(*) FROM bookings b WHERE b.customer_id = c.id AND b.status != 'cancelled') bookings FROM customers c WHERE c.company_id = ? ORDER BY c.name`, company.id);
-    csv = toCsv(rows, [['Name', (r) => r.name], ['Email', (r) => r.email], ['Phone', (r) => r.phone], ['Address', (r) => r.address], ['City', (r) => r.city],
-      ['Bookings', (r) => r.bookings], ['Total spent', (r) => money(r.spent)], ['Customer since', (r) => r.created_at.slice(0, 10)]]);
+    csv = toCsv(rows, [['Naam', (r) => r.name], ['E-mailadres', (r) => r.email], ['Telefoon', (r) => r.phone], ['Adres', (r) => r.address], ['Plaats', (r) => r.city],
+      ['Boekingen', (r) => r.bookings], ['Totaal besteed', (r) => money(r.spent)], ['Klant sinds', (r) => r.created_at.slice(0, 10)]]);
   } else {
-    throw badRequest('Unknown report');
+    throw badRequest('Onbekend rapport');
   }
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="cleanflow-${req.params.report}-${from}-to-${to}.csv"`);
+  res.setHeader('Content-Disposition', `attachment; filename="cleanflow-${{ bookings: 'boekingen', payments: 'betalingen', customers: 'klanten' }[req.params.report]}-${from}-tot-${to}.csv"`);
   res.send(`﻿${csv}`);
 });
 

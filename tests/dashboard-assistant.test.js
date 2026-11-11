@@ -62,38 +62,46 @@ test('assistant quotes only configured prices and services', async () => {
   const o = await aiCompany();
   const k = o.k();
   const r = ruleRespond(k, 'How much does deep cleaning cost?');
-  assert.match(r.reply, /€195\.00/);
+  assert.match(r.reply, /€\s195,00/);
   assert.equal(r.escalate, false);
   const all = ruleRespond(k, 'What are your prices?');
-  const quoted = [...all.reply.matchAll(/€([\d,.]+)/g)].map((m) => Math.round(Number(m[1].replace(',', '')) * 100));
+  const quoted = [...all.reply.matchAll(/€\s?([\d.]+,\d{2})/g)].map((m) => Math.round(Number(m[1].replace(/\./g, '').replace(',', '.')) * 100));
   const configured = new Set(k.services.map((s) => s.price_cents));
   assert.ok(quoted.length >= 6);
   for (const p of quoted) assert.ok(configured.has(p), `quoted price ${p} must exist in services`);
   // Changing the price changes the answer immediately.
-  const deep = k.services.find((s) => s.name === 'Deep cleaning');
+  const deep = k.services.find((s) => s.name === 'Dieptereiniging');
   await o.c.patch(`/services/${deep.id}`, { price: 210 });
-  assert.match(ruleRespond(o.k(), 'price for a deep clean?').reply, /€210\.00/);
+  assert.match(ruleRespond(o.k(), 'price for a deep clean?').reply, /€\s210,00/);
+  assert.match(ruleRespond(o.k(), 'Wat kost een dieptereiniging?').reply, /€\s210,00/);
+  assert.match(ruleRespond(o.k(), 'Hoeveel kost glasbewassing?').reply, /vanaf €\s65,00/);
 });
 
 test('assistant answers hours and FAQs from verified data', async () => {
   const o = await aiCompany();
   const hours = ruleRespond(o.k(), 'What are your opening hours?');
-  assert.match(hours.reply, /Monday: 08:00–18:00/);
-  assert.match(hours.reply, /Sunday: Closed/);
+  assert.match(hours.reply, /Maandag: 08:00–18:00/);
+  assert.match(hours.reply, /Zondag: Gesloten/);
+  assert.match(ruleRespond(o.k(), 'Zijn jullie op zondag open?').reply, /Zondag: Gesloten/);
+  assert.match(ruleRespond(o.k(), 'Zijn jullie vrijdag open?').reply, /Vrijdag: 08:00–18:00/);
   assert.equal(ruleRespond(o.k(), 'do you bring cleaning supplies').reply, 'Yes, we bring all supplies and equipment.');
 });
 
 test('assistant escalates instead of guessing', async () => {
   const o = await aiCompany();
-  for (const q of ['Can I get a student discount?', 'Do you have a parking permit for zone B?', 'I want a refund, the cleaner broke my vase', 'Can I talk to a human please?']) {
+  for (const q of ['Can I get a student discount?', 'Do you have a parking permit for zone B?', 'I want a refund, the cleaner broke my vase', 'Can I talk to a human please?',
+    'Ik wil mijn geld terug', 'De schoonmaker heeft mijn vaas kapot gemaakt', 'Kan ik iemand spreken?', 'Hebben jullie studentenkorting?']) {
     const r = ruleRespond(o.k(), q);
     assert.equal(r.escalate, true, q);
     assert.doesNotMatch(r.reply, /€/, 'no prices invented in escalations');
   }
   const book = ruleRespond(o.k(), 'Can I book a regular home cleaning next week?');
   assert.equal(book.intent, 'booking');
-  assert.match(book.reply, /Book now/);
-  assert.match(book.reply, /only reserved once/);
+  assert.match(book.reply, /Nu boeken/);
+  assert.match(book.reply, /pas definitief/);
+  const nl = ruleRespond(o.k(), 'Kan ik volgende week een afspraak maken voor huishoudelijke schoonmaak?');
+  assert.equal(nl.intent, 'booking');
+  assert.match(nl.reply, /eerstvolgende vrije tijden voor Reguliere huishoudelijke schoonmaak/);
 });
 
 test('public chat: conversation, escalation notification, consent-based contact capture', async () => {

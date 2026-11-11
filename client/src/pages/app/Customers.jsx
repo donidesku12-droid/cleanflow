@@ -23,22 +23,22 @@ export function CustomerForm({ open, onClose, initial, onSaved }) {
       const body = Object.fromEntries(Object.entries(f.values).map(([k, v]) => [k, v === '' ? null : v]));
       body.name = f.values.name;
       const d = initial?.id ? await api.patch(`/customers/${initial.id}`, body) : await api.post('/customers', body);
-      toast.success(initial?.id ? 'Customer updated' : 'Customer added');
+      toast.success(initial?.id ? 'Klant bijgewerkt' : 'Klant toegevoegd');
       onSaved(d.customer);
     } catch (err) { f.applyServerError(err); toast.error(err.message); } finally { setSaving(false); }
   };
   return (
-    <Modal open={open} onClose={onClose} title={initial?.id ? 'Edit customer' : 'Add customer'} size="max-w-2xl"
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={submit} loading={saving}>{initial?.id ? 'Save changes' : 'Add customer'}</Button></>}>
+    <Modal open={open} onClose={onClose} title={initial?.id ? 'Klant wijzigen' : 'Klant toevoegen'} size="max-w-2xl"
+      footer={<><Button variant="secondary" onClick={onClose}>Annuleren</Button><Button onClick={submit} loading={saving}>{initial?.id ? 'Wijzigingen opslaan' : 'Klant toevoegen'}</Button></>}>
       <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-        <Input label="Full name" value={f.values.name} onChange={f.set('name')} error={f.errors.name} required className="sm:col-span-2" />
-        <Input label="Email" type="email" value={f.values.email} onChange={f.set('email')} error={f.errors.email} />
-        <Input label="Phone" type="tel" value={f.values.phone} onChange={f.set('phone')} error={f.errors.phone} />
-        <Input label="Address" value={f.values.address} onChange={f.set('address')} error={f.errors.address} className="sm:col-span-2" />
-        <Input label="Postal code" value={f.values.postal_code} onChange={f.set('postal_code')} error={f.errors.postal_code} />
-        <Input label="City" value={f.values.city} onChange={f.set('city')} error={f.errors.city} />
-        <Input label="Tags" placeholder="e.g. VIP, weekly, key holder" value={f.values.tags} onChange={f.set('tags')} error={f.errors.tags} className="sm:col-span-2" />
-        <Textarea label="Notes" placeholder="Pets, access instructions, preferences…" value={f.values.notes} onChange={f.set('notes')} error={f.errors.notes} className="sm:col-span-2" />
+        <Input label="Volledige naam" value={f.values.name} onChange={f.set('name')} error={f.errors.name} required className="sm:col-span-2" />
+        <Input label="E-mailadres" type="email" value={f.values.email} onChange={f.set('email')} error={f.errors.email} />
+        <Input label="Telefoonnummer" type="tel" value={f.values.phone} onChange={f.set('phone')} error={f.errors.phone} />
+        <Input label="Adres" value={f.values.address} onChange={f.set('address')} error={f.errors.address} className="sm:col-span-2" />
+        <Input label="Postcode" value={f.values.postal_code} onChange={f.set('postal_code')} error={f.errors.postal_code} />
+        <Input label="Plaats" value={f.values.city} onChange={f.set('city')} error={f.errors.city} />
+        <Input label="Labels" placeholder="bijv. VIP, wekelijks, heeft sleutel" value={f.values.tags} onChange={f.set('tags')} error={f.errors.tags} className="sm:col-span-2" />
+        <Textarea label="Notities" placeholder="Huisdieren, toegang, voorkeuren…" value={f.values.notes} onChange={f.set('notes')} error={f.errors.notes} className="sm:col-span-2" />
         <button type="submit" className="hidden" />
       </form>
     </Modal>
@@ -61,37 +61,37 @@ export default function Customers() {
 
   return (
     <div>
-      <PageHeader title="Customers" description="Everyone you clean for, with history and lifetime value."
+      <PageHeader title="Klanten" description="Iedereen voor wie je schoonmaakt, met geschiedenis en totale besteding."
         actions={<>
-          {can('advanced_reporting') && <Button variant="secondary" icon={Download} href="/api/dashboard/export/customers">Export CSV</Button>}
-          <Button icon={Plus} onClick={() => setParams({ new: '1' })}>Add customer</Button>
+          {can('advanced_reporting') && <Button variant="secondary" icon={Download} href="/api/dashboard/export/customers">CSV exporteren</Button>}
+          <Button icon={Plus} onClick={() => setParams({ new: '1' })}>Klant toevoegen</Button>
         </>} />
       <Card>
         <div className="grid gap-3 border-b border-navy-100 p-4 md:grid-cols-[1fr_auto_auto_auto]">
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-navy-300" />
-            <input className="input pl-10" placeholder="Search name, email, phone or address…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search customers" />
+            <input className="input pl-10" placeholder="Zoek op naam, e-mail, telefoon of adres…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Klanten zoeken" />
           </div>
-          <Select value={segment} onChange={(e) => setSegment(e.target.value)} aria-label="Segment">
-            <option value="all">All customers</option><option value="new">New (last 30 days)</option><option value="repeat">Repeat customers</option>
-            <option value="inactive">Inactive (90+ days)</option><option value="no_bookings">No bookings yet</option>
+          <Select value={segment} onChange={(e) => setSegment(e.target.value)} aria-label="Groep">
+            <option value="all">Alle klanten</option><option value="new">Nieuw (laatste 30 dagen)</option><option value="repeat">Vaste klanten</option>
+            <option value="inactive">Inactief (90+ dagen)</option><option value="no_bookings">Nog geen boekingen</option>
           </Select>
-          <Select value={city} onChange={(e) => setCity(e.target.value)} aria-label="City">
-            <option value="">All cities</option>{res.data?.cities.map((c) => <option key={c} value={c}>{c}</option>)}
+          <Select value={city} onChange={(e) => setCity(e.target.value)} aria-label="Plaats">
+            <option value="">Alle plaatsen</option>{res.data?.cities.map((c) => <option key={c} value={c}>{c}</option>)}
           </Select>
-          <Select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
-            <option value="name">Sort: Name</option><option value="recent">Sort: Newest</option><option value="spend">Sort: Highest spend</option><option value="bookings">Sort: Most bookings</option>
+          <Select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sorteren">
+            <option value="name">Sorteer: naam</option><option value="recent">Sorteer: nieuwste</option><option value="spend">Sorteer: hoogste besteding</option><option value="bookings">Sorteer: meeste boekingen</option>
           </Select>
         </div>
         {res.loading && !res.data ? <div className="space-y-3 p-5">{[...Array(6)].map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
           : res.error ? <ErrorState error={res.error} onRetry={res.reload} />
-            : list.length === 0 ? <EmptyState icon={Users} title={debounced || segment !== 'all' || city ? 'No customers match' : 'No customers yet'} description="Customers are added automatically when they book online, or you can add them yourself." action={<Button size="sm" icon={Plus} onClick={() => setParams({ new: '1' })}>Add customer</Button>} />
+            : list.length === 0 ? <EmptyState icon={Users} title={debounced || segment !== 'all' || city ? 'Geen klanten gevonden' : 'Nog geen klanten'} description="Klanten worden automatisch toegevoegd als ze online boeken, of je voegt ze zelf toe." action={<Button size="sm" icon={Plus} onClick={() => setParams({ new: '1' })}>Klant toevoegen</Button>} />
               : (
                 <div className={cx('overflow-x-auto transition-opacity', res.loading && 'opacity-60')}>
                   <table className="w-full min-w-[720px]">
                     <thead className="border-b border-navy-100"><tr>
-                      <th className="table-th">Customer</th><th className="table-th">Contact</th><th className="table-th">City</th>
-                      <th className="table-th text-right">Bookings</th><th className="table-th text-right">Total spent</th><th className="table-th">Last booking</th>
+                      <th className="table-th">Klant</th><th className="table-th">Contact</th><th className="table-th">Plaats</th>
+                      <th className="table-th text-right">Boekingen</th><th className="table-th text-right">Totaal besteed</th><th className="table-th">Laatste boeking</th>
                     </tr></thead>
                     <tbody className="divide-y divide-navy-100">
                       {list.map((c) => (
@@ -102,12 +102,12 @@ export default function Customers() {
                           <td className="table-td">{c.city || '—'}</td>
                           <td className="table-td text-right font-medium">{c.booking_count}</td>
                           <td className="table-td text-right font-semibold text-navy-900">{money(c.total_spent_cents, cur)}</td>
-                          <td className="table-td text-navy-500">{c.last_booking_at ? fmtDate(c.last_booking_at) : 'Never'}</td>
+                          <td className="table-td text-navy-500">{c.last_booking_at ? fmtDate(c.last_booking_at) : 'Nooit'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  <p className="border-t border-navy-100 px-4 py-3 text-xs text-navy-400">{list.length} customer{list.length === 1 ? '' : 's'}</p>
+                  <p className="border-t border-navy-100 px-4 py-3 text-xs text-navy-400">{list.length} klant{list.length === 1 ? '' : 'en'}</p>
                 </div>
               )}
       </Card>
