@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-navy-50: #f3f5fa;
+  --color-navy-100: #e4e9f2;
+  --color-navy-200: #c7d0e1;
+  --color-navy-300: #9aa8c3;
+  --color-navy-400: #6b7c9e;
+  --color-navy-500: #4a5a7d;
+  --color-navy-600: #344363;
+  --color-navy-700: #24324f;
+  --color-navy-800: #17233d;
+  --color-navy-900: #0b1b3a;
+  --color-navy-950: #071126;
+  --shadow-card: 0 1px 2px rgba(11, 27, 58, 0.04), 0 1px 3px rgba(11, 27, 58, 0.06);
+  --shadow-soft: 0 10px 30px -12px rgba(11, 27, 58, 0.18);
+  --shadow-glow: 0 20px 50px -20px rgba(16, 185, 129, 0.45);
+  --animate-fade-in: fade-in 0.25s ease-out both;
+  --animate-slide-up: slide-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-slide-in-right: slide-in-right 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes slide-up { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+  @keyframes slide-in-right { from { transform: translateX(100%) } to { transform: none } }
+}
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+  body { @apply bg-white text-navy-900; }
+  :focus-visible { @apply outline-2 outline-offset-2 outline-emerald-500; }
+  ::selection { @apply bg-emerald-100 text-navy-900; }
+}
+
+@layer components {
+  .card { @apply rounded-2xl border border-navy-100 bg-white shadow-card; }
+  .input {
+    @apply block w-full rounded-xl border border-navy-200 bg-white px-3.5 py-2.5 text-sm text-navy-900 placeholder:text-navy-300
+      transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 focus:outline-none disabled:bg-navy-50 disabled:text-navy-400;
+  }
+  .label { @apply mb-1.5 block text-sm font-medium text-navy-700; }
+  .table-th { @apply px-4 py-3 text-left text-xs font-semibold tracking-wide text-navy-400 uppercase; }
+  .table-td { @apply px-4 py-3 text-sm text-navy-700; }
+  .container-x { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+}
+
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #c7d0e1; border-radius: 9999px; }
